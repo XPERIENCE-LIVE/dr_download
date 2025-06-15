@@ -3,8 +3,10 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from downloader import enqueue_download, get_progress, get_history
 from config import load_config, save_config
+from utils import setup_logging
 import uvicorn
 
+setup_logging()
 app = FastAPI()
 
 
