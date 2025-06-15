@@ -1,10 +1,17 @@
-from fastapi import FastAPI, UploadFile, BackgroundTasks
+from fastapi import FastAPI, UploadFile
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from downloader import enqueue_download, get_progress, get_history
 from config import load_config, save_config
 import uvicorn
 
 app = FastAPI()
+
+
+class DownloadRequest(BaseModel):
+    url: str
+    format: str
+    output_dir: str
 
 app.add_middleware(
     CORSMiddleware,
@@ -15,9 +22,8 @@ app.add_middleware(
 )
 
 @app.post("/download/")
-async def download_media(background_tasks: BackgroundTasks, url: str, format: str, output_dir: str, cookies: UploadFile = None):
-    task_id = enqueue_download(url, format, output_dir, cookies)
-    background_tasks.add_task(get_progress, task_id)
+async def download_media(request: DownloadRequest, cookies: UploadFile = None):
+    task_id = enqueue_download(request.url, request.format, request.output_dir, cookies)
     return {"task_id": task_id}
 
 @app.get("/progress/{task_id}")
