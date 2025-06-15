@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from downloader import enqueue_download, get_progress, get_history
@@ -12,8 +12,6 @@ app = FastAPI()
 
 class DownloadRequest(BaseModel):
     url: str
-    format: str
-    output_dir: str
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,13 +22,13 @@ app.add_middleware(
 )
 
 @app.post("/download/")
-async def download_media(request: DownloadRequest, cookies: UploadFile = None):
-    task_id = enqueue_download(request.url, request.format, request.output_dir, cookies)
-    return {"task_id": task_id}
+async def download_media(request: DownloadRequest):
+    enqueue_download(request.url)
+    return {"status": "queued"}
 
-@app.get("/progress/{task_id}")
-async def check_progress(task_id: str):
-    return get_progress(task_id)
+@app.get("/progress/{video_url}")
+async def check_progress(video_url: str):
+    return {"progress": get_progress(video_url)}
 
 @app.get("/history/")
 async def get_download_history():
