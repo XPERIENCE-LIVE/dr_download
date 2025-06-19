@@ -16,7 +16,8 @@ npm run build
 ```
 
 ## Running
-Launch the Electron app after building:
+After building the frontend, start the Electron app from its directory:
 ```
+cd electron
 npm start
 ```
