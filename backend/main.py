@@ -5,6 +5,7 @@ from downloader import enqueue_download, get_progress, get_history
 from config import load_config, save_config
 from utils import setup_logging
 import uvicorn
+import os
 
 setup_logging()
 app = FastAPI()
@@ -13,9 +14,15 @@ app = FastAPI()
 class DownloadRequest(BaseModel):
     url: str
 
+origins_env = os.getenv("ALLOW_ORIGINS")
+if origins_env:
+    allowed_origins = [origin.strip() for origin in origins_env.split(',') if origin.strip()]
+else:
+    allowed_origins = ["http://localhost:3000", "http://localhost:5173"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
