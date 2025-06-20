@@ -22,6 +22,9 @@ cd electron
 npm start
 ```
 
+When the Electron UI starts, the output path field is empty by default. Use the
+**Choose...** button to pick a download directory through the OS folder dialog.
+
 ## Basic API Usage
 Start a download by posting a URL to `/download/` and store the returned
 `task_id`:

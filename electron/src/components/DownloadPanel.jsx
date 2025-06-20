@@ -4,9 +4,18 @@ import axios from "axios";
 export default function DownloadPanel() {
   const [url, setUrl] = useState("");
   const [format, setFormat] = useState("video");
-  const [output, setOutput] = useState("C:/Downloads");
+  const [output, setOutput] = useState("");
   const [taskId, setTaskId] = useState(null);
   const [progress, setProgress] = useState(null);
+
+  const handleSelectFolder = async () => {
+    if (window.electronAPI?.selectFolder) {
+      const folder = await window.electronAPI.selectFolder();
+      if (folder) {
+        setOutput(folder);
+      }
+    }
+  };
 
   const handleDownload = async () => {
     try {
@@ -38,6 +47,7 @@ export default function DownloadPanel() {
         <option value="audio">Audio</option>
       </select>
       <input value={output} onChange={(e) => setOutput(e.target.value)} placeholder="Output folder" />
+      <button type="button" onClick={handleSelectFolder}>Choose...</button>
       <button onClick={handleDownload}>Start Download</button>
       {taskId && <button onClick={checkProgress}>Check Progress</button>}
       {progress !== null && <p>Progress: {progress.toFixed(2)}%</p>}
