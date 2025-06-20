@@ -21,3 +21,18 @@ After building the frontend, start the Electron app from its directory:
 cd electron
 npm start
 ```
+
+## Basic API Usage
+Start a download by posting a URL to `/download/` and store the returned
+`task_id`:
+
+```
+POST http://localhost:8000/download/
+{"url": "https://example.com/video"}
+```
+
+Query progress with that identifier:
+
+```
+GET http://localhost:8000/progress/<task_id>
+```

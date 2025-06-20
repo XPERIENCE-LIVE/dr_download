@@ -30,12 +30,12 @@ app.add_middleware(
 
 @app.post("/download/")
 async def download_media(request: DownloadRequest):
-    enqueue_download(request.url)
-    return {"status": "queued"}
+    task_id = enqueue_download(request.url)
+    return {"status": "queued", "task_id": task_id}
 
-@app.get("/progress/")
-async def check_progress(url: str):
-    return {"progress": get_progress(url)}
+@app.get("/progress/{task_id}")
+async def check_progress(task_id: str):
+    return {"progress": get_progress(task_id)}
 
 @app.get("/history/")
 async def get_download_history():
