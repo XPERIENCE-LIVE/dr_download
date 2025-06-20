@@ -16,8 +16,7 @@ npm run build
 ```
 
 ## Running
-The Electron package's entry file is `electron/electron.js`. After building,
-start the application from within the `electron` directory:
+
 ```
 cd electron
 npm start
