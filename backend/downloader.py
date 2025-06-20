@@ -38,9 +38,11 @@ def _worker() -> None:
 
 def get_progress(task_id: str) -> int:
     """Return the download progress percentage for the given task."""
-    return _progress.get(task_id, 0)
+    with _state_lock:
+        return _progress.get(task_id, 0)
 
 
 def get_history() -> list[dict[str, str | int]]:
     """Return the list of past download actions."""
-    return list(_history)
+    with _state_lock:
+        return list(_history)
