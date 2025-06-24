@@ -5,8 +5,15 @@
 pip install -r backend/requirements.txt
 python -m py_compile backend/*.py
 ```
-Set `ALLOW_ORIGINS` to customize CORS (comma-separated list). For development,
-the backend defaults to allowing `http://localhost:3000` and `http://localhost:5173`.
+Optionally set the `ALLOW_ORIGINS` environment variable to customize CORS
+(comma-separated list). For development, the backend defaults to allowing
+`http://localhost:3000` and `http://localhost:5173`.
+
+### Start the API server
+```
+cd backend
+uvicorn main:app --host 127.0.0.1 --port 8000
+```
 
 ## Frontend Setup
 ```
