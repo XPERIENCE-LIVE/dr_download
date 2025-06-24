@@ -39,3 +39,6 @@ Query progress with that identifier:
 ```
 GET http://localhost:8000/progress/<task_id>
 ```
+
+## License
+This project is licensed under the [MIT License](LICENSE).
