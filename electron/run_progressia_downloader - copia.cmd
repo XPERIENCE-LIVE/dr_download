@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM === Ir a carpeta del proyecto ===
-cd /d C:\PROYECTOS\MediaDownloaderPROv2.0\electron
+cd /d %~dp0
 
 REM === Lanzar Vite en segundo plano ===
 start "VITE SERVER" cmd /c "npm run dev"
