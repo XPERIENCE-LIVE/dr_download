@@ -5,7 +5,7 @@ import uuid
 
 _queue: Queue[tuple[str, str]] = Queue()
 _progress: dict[str, int] = {}
-_history: list[dict[str, str | int]] = []
+_history: dict[str, dict[str, str | int]] = {}
 _state_lock = threading.Lock()
 _worker_started = False
 
@@ -17,7 +17,7 @@ def enqueue_download(video_url: str) -> str:
     _queue.put((task_id, video_url))
     with _state_lock:
         _progress[task_id] = 0
-        _history.append({"id": task_id, "url": video_url, "status": "queued"})
+        _history[task_id] = {"id": task_id, "url": video_url, "status": "queued"}
     if not _worker_started:
         threading.Thread(target=_worker, daemon=True).start()
         _worker_started = True
@@ -32,17 +32,25 @@ def _worker() -> None:
             with _state_lock:
                 _progress[task_id] = i * 10
         with _state_lock:
-            _history.append({"id": task_id, "url": url, "status": "done"})
+            if task_id in _history:
+                _history[task_id]["status"] = "done"
+            else:
+                _history[task_id] = {"id": task_id, "url": url, "status": "done"}
+            _progress.pop(task_id, None)
         _queue.task_done()
 
 
 def get_progress(task_id: str) -> int:
     """Return the download progress percentage for the given task."""
     with _state_lock:
-        return _progress.get(task_id, 0)
+        if task_id in _progress:
+            return _progress[task_id]
+        if task_id in _history and _history[task_id].get("status") == "done":
+            return 100
+        return 0
 
 
-def get_history() -> list[dict[str, str | int]]:
-    """Return the list of past download actions."""
+def get_history() -> dict[str, dict[str, str | int]]:
+    """Return the dictionary of past download actions keyed by task ID."""
     with _state_lock:
-        return list(_history)
+        return dict(_history)
