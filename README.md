@@ -29,6 +29,15 @@ cd electron
 npm start
 ```
 
+Running `npm start` as the `root` user fails because Electron requires the
+`--no-sandbox` flag in that scenario. Whenever possible, run the application as
+a normal user. For advanced cases where running as `root` is unavoidable, pass
+the flag explicitly:
+
+```
+npm start -- --no-sandbox
+```
+
 When the Electron UI starts, the output path field is empty by default. Use the
 **Choose...** button to pick a download directory through the OS folder dialog.
 
