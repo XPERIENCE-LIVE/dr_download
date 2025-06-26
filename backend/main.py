@@ -13,6 +13,8 @@ app = FastAPI()
 
 class DownloadRequest(BaseModel):
     url: str
+    format: str
+    output_dir: str
 
 origins_env = os.getenv("ALLOW_ORIGINS")
 if origins_env:
@@ -30,7 +32,7 @@ app.add_middleware(
 
 @app.post("/download/")
 async def download_media(request: DownloadRequest):
-    task_id = enqueue_download(request.url)
+    task_id = enqueue_download(request.url, request.format, request.output_dir)
     return {"status": "queued", "task_id": task_id}
 
 @app.get("/progress/{task_id}")

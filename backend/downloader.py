@@ -1,23 +1,31 @@
 import threading
-import time
+import os
+import subprocess
 from queue import Queue
 import uuid
+import yt_dlp
 
-_queue: Queue[tuple[str, str]] = Queue()
+_queue: Queue[tuple[str, str, str, str]] = Queue()
 _progress: dict[str, int] = {}
 _history: dict[str, dict[str, str | int]] = {}
 _state_lock = threading.Lock()
 _worker_started = False
 
 
-def enqueue_download(video_url: str) -> str:
+def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
     """Add a video URL to the download queue and return a task ID."""
     global _worker_started
     task_id = str(uuid.uuid4())
-    _queue.put((task_id, video_url))
+    _queue.put((task_id, video_url, fmt, output_dir))
     with _state_lock:
         _progress[task_id] = 0
-        _history[task_id] = {"id": task_id, "url": video_url, "status": "queued"}
+        _history[task_id] = {
+            "id": task_id,
+            "url": video_url,
+            "format": fmt,
+            "output_dir": output_dir,
+            "status": "queued",
+        }
     if not _worker_started:
         threading.Thread(target=_worker, daemon=True).start()
         _worker_started = True
@@ -26,16 +34,52 @@ def enqueue_download(video_url: str) -> str:
 
 def _worker() -> None:
     while True:
-        task_id, url = _queue.get()
-        for i in range(1, 11):
-            time.sleep(0.2)
-            with _state_lock:
-                _progress[task_id] = i * 10
+        task_id, url, fmt, out_dir = _queue.get()
+        output_template = os.path.join(out_dir, "%(title)s.%(ext)s")
+
+        def progress_hook(d: dict) -> None:
+            if d.get("status") == "downloading":
+                total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                downloaded = d.get("downloaded_bytes", 0)
+                if total:
+                    percent = int(downloaded / total * 100)
+                    with _state_lock:
+                        _progress[task_id] = percent
+
+        ydl_opts = {
+            "outtmpl": output_template,
+            "progress_hooks": [progress_hook],
+        }
+
+        if fmt == "audio":
+            ydl_opts.update(
+                {
+                    "format": "bestaudio/best",
+                    "postprocessors": [
+                        {
+                            "key": "FFmpegExtractAudio",
+                            "preferredcodec": "mp3",
+                        }
+                    ],
+                }
+            )
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                ydl.download([url])
+            status = "done"
+        except Exception:
+            status = "error"
+
         with _state_lock:
-            if task_id in _history:
-                _history[task_id]["status"] = "done"
-            else:
-                _history[task_id] = {"id": task_id, "url": url, "status": "done"}
+            entry = _history.get(task_id, {
+                "id": task_id,
+                "url": url,
+                "format": fmt,
+                "output_dir": out_dir,
+            })
+            entry["status"] = status
+            _history[task_id] = entry
             _progress.pop(task_id, None)
         _queue.task_done()
 
