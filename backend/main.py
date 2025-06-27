@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from downloader import enqueue_download, get_progress, get_history
@@ -38,6 +38,8 @@ app.add_middleware(
 
 @app.post("/download/")
 async def download_media(request: DownloadRequest):
+    if not request.output_dir or not os.path.isdir(request.output_dir):
+        raise HTTPException(status_code=400, detail="Output directory required")
     task_id = enqueue_download(request.url, request.format, request.output_dir)
     return {"status": "queued", "task_id": task_id}
 

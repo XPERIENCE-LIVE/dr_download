@@ -20,6 +20,10 @@ export default function DownloadPanel() {
   };
 
   const handleDownload = async () => {
+    if (!output) {
+      alert("Please choose an output folder first.");
+      return;
+    }
     try {
       const res = await axios.post(`${API_BASE_URL}/download/`, {
         url,
@@ -54,7 +58,7 @@ export default function DownloadPanel() {
       </select>
       <input value={output} onChange={(e) => setOutput(e.target.value)} placeholder="Output folder" />
       <button type="button" onClick={handleSelectFolder}>Choose...</button>
-      <button onClick={handleDownload}>Start Download</button>
+      <button onClick={handleDownload} disabled={!output}>Start Download</button>
       {taskId && <button onClick={checkProgress}>Check Progress</button>}
       {progress !== null && <p>Progress: {progress.toFixed(2)}%</p>}
     </div>
