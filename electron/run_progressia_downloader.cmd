@@ -5,7 +5,7 @@ cd /d "%~dp0"
 
 echo.
 echo ===============================
-echo  PROGRESSIA DOWNLOADER v2.0
+echo  Dr. Download 2.0
 echo  Inicializando entorno...
 echo ===============================
 echo.
@@ -23,5 +23,5 @@ if not exist node_modules (
 
 REM Ejecuta la aplicación con Electron
 echo.
-echo Ejecutando PROGRESSIA Downloader...
+echo Ejecutando Dr. Download 2.0...
 call npx electron .

@@ -1,5 +1,5 @@
 @echo off
-title PROGRESSIA Downloader Launcher
+title Dr. Download 2.0 Launcher
 cd /d %~dp0
 
 echo.
