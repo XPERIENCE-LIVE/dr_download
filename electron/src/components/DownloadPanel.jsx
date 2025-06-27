@@ -43,7 +43,11 @@ export default function DownloadPanel() {
 
   return (
     <div>
-      <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="YouTube or playlist URL" />
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder="YouTube or playlist URL"
+      />
       <select value={format} onChange={(e) => setFormat(e.target.value)}>
         <option value="video">Video</option>
         <option value="audio">Audio</option>
