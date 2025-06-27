@@ -9,6 +9,7 @@ DEFAULT_CONFIG = {
     "check_updates": True
 }
 
+
 def load_config():
     if not os.path.exists(CONFIG_FILE):
         save_config(DEFAULT_CONFIG)
@@ -19,6 +20,7 @@ def load_config():
     except Exception:
         save_config(DEFAULT_CONFIG)
         return DEFAULT_CONFIG
+
 
 def save_config(config):
     with open(CONFIG_FILE, "w") as f:
