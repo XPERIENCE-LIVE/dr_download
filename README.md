@@ -1,6 +1,6 @@
-# Progressia Media Downloader
+# Dr. Download 2.0
 
-Progressia is a desktop application for downloading audio or video content using [yt-dlp](https://github.com/yt-dlp/yt-dlp).  It consists of a FastAPI backend and an Electron+React frontend, providing a simple GUI and an HTTP API for programmatic access.
+Dr. Download 2.0 is a desktop application developed by **PROGRESSIA** for downloading audio or video content using [yt-dlp](https://github.com/yt-dlp/yt-dlp).  It consists of a FastAPI backend and an Electron+React frontend, providing a simple GUI and an HTTP API for programmatic access.
 
 ## Features
 - Queue multiple downloads and monitor their progress.
