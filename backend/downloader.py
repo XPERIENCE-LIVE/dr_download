@@ -35,6 +35,7 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
 def _worker() -> None:
     while True:
         task_id, url, fmt, out_dir = _queue.get()
+        os.makedirs(out_dir, exist_ok=True)  # output directory creation
         output_template = os.path.join(out_dir, "%(title)s.%(ext)s")
 
         def progress_hook(d: dict) -> None:
