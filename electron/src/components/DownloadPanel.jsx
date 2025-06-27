@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+
 export default function DownloadPanel() {
   const [url, setUrl] = useState("");
   const [format, setFormat] = useState("video");
@@ -19,7 +21,7 @@ export default function DownloadPanel() {
 
   const handleDownload = async () => {
     try {
-      const res = await axios.post("http://localhost:8000/download/", {
+      const res = await axios.post(`${API_BASE_URL}/download/`, {
         url,
         format,
         output_dir: output
@@ -32,7 +34,7 @@ export default function DownloadPanel() {
 
   const checkProgress = async () => {
     try {
-      const res = await axios.get(`http://localhost:8000/progress/${taskId}`);
+      const res = await axios.get(`${API_BASE_URL}/progress/${taskId}`);
       setProgress(res.data.progress);
     } catch (error) {
       console.error("Error checking progress:", error);

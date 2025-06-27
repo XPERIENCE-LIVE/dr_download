@@ -22,6 +22,13 @@ npm install
 npm run build
 ```
 
+Create an `.env` file in the `electron` directory to override the backend URL:
+
+```
+VITE_API_BASE_URL=http://your-api-host:8000
+```
+If unset, the Electron app defaults to `http://localhost:8000`.
+
 ## Running
 
 ```
