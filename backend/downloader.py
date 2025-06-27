@@ -1,6 +1,5 @@
 import threading
 import os
-import subprocess
 from queue import Queue
 import uuid
 import yt_dlp
