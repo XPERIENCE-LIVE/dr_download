@@ -3,6 +3,7 @@ import os
 from queue import Queue
 import uuid
 import yt_dlp
+import logging
 
 _queue: Queue[tuple[str, str, str, str]] = Queue()
 _progress: dict[str, int] = {}
@@ -33,55 +34,62 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
 
 def _worker() -> None:
     while True:
-        task_id, url, fmt, out_dir = _queue.get()
-        os.makedirs(out_dir, exist_ok=True)  # output directory creation
-        output_template = os.path.join(out_dir, "%(title)s.%(ext)s")
-
-        def progress_hook(d: dict) -> None:
-            if d.get("status") == "downloading":
-                total = d.get("total_bytes") or d.get("total_bytes_estimate")
-                downloaded = d.get("downloaded_bytes", 0)
-                if total:
-                    percent = int(downloaded / total * 100)
-                    with _state_lock:
-                        _progress[task_id] = percent
-
-        ydl_opts = {
-            "outtmpl": output_template,
-            "progress_hooks": [progress_hook],
-        }
-
-        if fmt == "audio":
-            ydl_opts.update(
-                {
-                    "format": "bestaudio/best",
-                    "postprocessors": [
-                        {
-                            "key": "FFmpegExtractAudio",
-                            "preferredcodec": "mp3",
-                        }
-                    ],
-                }
-            )
-
+        task_id = url = fmt = out_dir = None
+        status = "error"
         try:
+            task_id, url, fmt, out_dir = _queue.get()
+            os.makedirs(out_dir, exist_ok=True)  # output directory creation
+            output_template = os.path.join(out_dir, "%(title)s.%(ext)s")
+
+            def progress_hook(d: dict) -> None:
+                if d.get("status") == "downloading":
+                    total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                    downloaded = d.get("downloaded_bytes", 0)
+                    if total:
+                        percent = int(downloaded / total * 100)
+                        with _state_lock:
+                            _progress[task_id] = percent
+
+            ydl_opts = {
+                "outtmpl": output_template,
+                "progress_hooks": [progress_hook],
+            }
+
+            if fmt == "audio":
+                ydl_opts.update(
+                    {
+                        "format": "bestaudio/best",
+                        "postprocessors": [
+                            {
+                                "key": "FFmpegExtractAudio",
+                                "preferredcodec": "mp3",
+                            }
+                        ],
+                    }
+                )
+
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 ydl.download([url])
             status = "done"
         except Exception:
+            logging.exception("Unexpected error while processing task %s", task_id)
             status = "error"
-
-        with _state_lock:
-            entry = _history.get(task_id, {
-                "id": task_id,
-                "url": url,
-                "format": fmt,
-                "output_dir": out_dir,
-            })
-            entry["status"] = status
-            _history[task_id] = entry
-            _progress.pop(task_id, None)
-        _queue.task_done()
+        finally:
+            if task_id is not None:
+                with _state_lock:
+                    entry = _history.get(
+                        task_id,
+                        {
+                            "id": task_id,
+                            "url": url,
+                            "format": fmt,
+                            "output_dir": out_dir,
+                        },
+                    )
+                    entry["status"] = status
+                    _history[task_id] = entry
+                    _progress.pop(task_id, None)
+                _queue.task_done()
 
 
 def get_progress(task_id: str) -> int:
