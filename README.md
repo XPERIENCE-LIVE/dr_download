@@ -1,67 +1,100 @@
 # Progressia Media Downloader
 
-## Backend Setup
-```
-pip install -r backend/requirements.txt
-python -m py_compile backend/*.py
-```
-Optionally set the `ALLOW_ORIGINS` environment variable to customize CORS
-(comma-separated list). For development, the backend defaults to allowing
-`http://localhost:3000` and `http://localhost:5173`.
+Progressia is a desktop application for downloading audio or video content using [yt-dlp](https://github.com/yt-dlp/yt-dlp).  It consists of a FastAPI backend and an Electron+React frontend, providing a simple GUI and an HTTP API for programmatic access.
 
-### Start the API server
-```
-cd backend
-uvicorn main:app --host 127.0.0.1 --port 8000
-```
+## Features
+- Queue multiple downloads and monitor their progress.
+- Choose between video or audio (MP3) output.
+- Simple configuration stored in `config.json`.
+- Cross‑platform desktop UI built with Electron.
 
-## Frontend Setup
-```
-cd electron
-npm install
-npm run build
-```
+## Requirements
+- Python 3.10 or newer
+- Node.js 18 or newer
+- `ffmpeg` available on your `PATH` for audio conversion
 
-Create an `.env` file in the `electron` directory to override the backend URL:
+## Getting Started
 
-```
-VITE_API_BASE_URL=http://your-api-host:8000
-```
-If unset, the Electron app defaults to `http://localhost:8000`.
+### Backend Setup
+1. Install dependencies:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+2. (Optional) Compile the sources to check for syntax errors:
+   ```bash
+   python -m py_compile backend/*.py
+   ```
+3. You may set the environment variable `ALLOW_ORIGINS` to a comma‑separated list of hosts allowed for CORS. By default the backend allows `http://localhost:3000` and `http://localhost:5173`.
+4. Start the API server:
+   ```bash
+   cd backend
+   uvicorn main:app --host 127.0.0.1 --port 8000
+   ```
 
-## Running
+### Frontend Setup
+1. Install Node dependencies:
+   ```bash
+   cd electron
+   npm install
+   ```
+2. Build the React frontend:
+   ```bash
+   npm run build
+   ```
+3. Create an `.env` file inside `electron` to override the API base URL if the backend runs elsewhere:
+   ```
+   VITE_API_BASE_URL=http://your-api-host:8000
+   ```
+   If omitted, the Electron app talks to `http://localhost:8000`.
 
-```
-cd electron
+### Running the Desktop App
+From the `electron` directory run:
+```bash
 npm start
 ```
-
-Running `npm start` as the `root` user fails because Electron requires the
-`--no-sandbox` flag in that scenario. Whenever possible, run the application as
-a normal user. For advanced cases where running as `root` is unavoidable, pass
-the flag explicitly:
-
-```
+If you must run the command as `root`, append `--no-sandbox`:
+```bash
 npm start -- --no-sandbox
 ```
+When the UI appears, use **Choose...** to pick an output directory. The path field is empty by default.
 
-When the Electron UI starts, the output path field is empty by default. Use the
-**Choose...** button to pick a download directory through the OS folder dialog.
+## API Reference
 
-## Basic API Usage
-Start a download by posting a URL to `/download/` and store the returned
-`task_id`:
-
+### `POST /download/`
+Start a new download.
+```json
+{ "url": "https://example.com/video", "format": "video", "output_dir": "/path/to/downloads" }
 ```
-POST http://localhost:8000/download/
-{"url": "https://example.com/video"}
+Response:
+```json
+{ "status": "queued", "task_id": "<uuid>" }
 ```
 
-Query progress with that identifier:
+### `GET /progress/{task_id}`
+Retrieve the current progress percentage for a task.
 
+### `GET /history/`
+List details of all queued and finished downloads.
+
+### `GET /config/` and `POST /config/`
+Read or update the contents of `config.json`. Example default configuration:
+```json
+{
+  "theme": "dark",
+  "max_downloads": 5,
+  "default_format": "video",
+  "check_updates": true
+}
 ```
-GET http://localhost:8000/progress/<task_id>
-```
+
+## Logs
+Backend logs are written to `logs/backend.log` in addition to standard output. Inspect this file if you encounter issues.
+
+## Packaging
+After building the frontend you can package the application with tools such as `electron-packager` or `electron-builder` to create a standalone installer. Packaging steps are not included in this repository.
+
+## Contributing
+Contributions and bug reports are welcome. Feel free to open an issue or PR.
 
 ## License
 This project is licensed under the [MIT License](LICENSE).
