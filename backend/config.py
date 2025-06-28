@@ -5,7 +5,9 @@ import os
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
 # Migrate config from old location if it exists in the repository root
-LEGACY_CONFIG = os.path.join(os.path.dirname(os.path.dirname(__file__)), "config.json")
+LEGACY_CONFIG = os.path.join(
+    os.path.dirname(os.path.dirname(__file__)), "config.json"
+)
 if not os.path.exists(CONFIG_FILE) and os.path.exists(LEGACY_CONFIG):
     os.replace(LEGACY_CONFIG, CONFIG_FILE)
 DEFAULT_CONFIG = {

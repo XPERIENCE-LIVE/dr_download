@@ -1,3 +1,4 @@
+import json
 import threading
 import os
 from queue import Queue
@@ -10,6 +11,26 @@ _progress: dict[str, int] = {}
 _history: dict[str, dict[str, str | int]] = {}
 _state_lock = threading.Lock()
 _worker_started = False
+_NUM_WORKERS = 4
+HISTORY_FILE = os.path.join(os.path.dirname(__file__), "history.json")
+
+
+def _load_history() -> None:
+    global _history
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, "r") as f:
+                _history = json.load(f)
+        except Exception:
+            _history = {}
+
+
+def _save_history() -> None:
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(_history, f, indent=2)
+
+
+_load_history()
 
 
 def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
@@ -26,8 +47,10 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
             "output_dir": output_dir,
             "status": "queued",
         }
+        _save_history()
     if not _worker_started:
-        threading.Thread(target=_worker, daemon=True).start()
+        for _ in range(_NUM_WORKERS):
+            threading.Thread(target=_worker, daemon=True).start()
         _worker_started = True
     return task_id
 
@@ -43,7 +66,9 @@ def _worker() -> None:
 
             def progress_hook(d: dict) -> None:
                 if d.get("status") == "downloading":
-                    total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                    total = d.get("total_bytes") or d.get(
+                        "total_bytes_estimate"
+                    )
                     downloaded = d.get("downloaded_bytes", 0)
                     if total:
                         percent = int(downloaded / total * 100)
@@ -72,7 +97,9 @@ def _worker() -> None:
                 ydl.download([url])
             status = "done"
         except Exception:
-            logging.exception("Unexpected error while processing task %s", task_id)
+            logging.exception(
+                "Unexpected error while processing task %s", task_id
+            )
             status = "error"
         finally:
             if task_id is not None:
@@ -88,6 +115,7 @@ def _worker() -> None:
                     )
                     entry["status"] = status
                     _history[task_id] = entry
+                    _save_history()
                     _progress.pop(task_id, None)
                 _queue.task_done()
 

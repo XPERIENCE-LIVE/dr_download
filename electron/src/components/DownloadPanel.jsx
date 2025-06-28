@@ -60,7 +60,7 @@ export default function DownloadPanel() {
       <button type="button" onClick={handleSelectFolder}>Choose...</button>
       <button onClick={handleDownload} disabled={!output}>Start Download</button>
       {taskId && <button onClick={checkProgress}>Check Progress</button>}
-      {progress !== null && <p>Progress: {progress.toFixed(2)}%</p>}
+      {progress !== null && <p>Progress: {progress}%</p>}
     </div>
   );
 }
