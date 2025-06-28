@@ -70,10 +70,11 @@ cd electron
 npm run lint
 ```
 ### Running Tests
-Install dependencies and run the unit tests with [pytest](https://pytest.org/):
+Install [yt-dlp](https://github.com/yt-dlp/yt-dlp) together with the development
+dependencies and then run [pytest](https://pytest.org/):
 ```bash
-pip install -r backend/requirements.txt pytest
-pytest
+pip install -r backend/requirements.txt -r backend/requirements-dev.txt
+pytest -q
 ```
 
 
