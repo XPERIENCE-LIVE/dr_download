@@ -60,6 +60,13 @@ When the UI appears, use **Choose...** to pick an output directory. The path fie
 
 On Windows you may double‑click `run_progressia_downloader.cmd` to install
 any missing dependencies and launch Electron automatically.
+### Running Tests
+Install dependencies and run the unit tests with [pytest](https://pytest.org/):
+```bash
+pip install -r backend/requirements.txt httpx pytest
+pytest
+```
+
 
 ## API Reference
 
