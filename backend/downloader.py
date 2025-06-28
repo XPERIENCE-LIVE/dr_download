@@ -48,10 +48,10 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
             "status": "queued",
         }
         _save_history()
-    if not _worker_started:
-        for _ in range(_NUM_WORKERS):
-            threading.Thread(target=_worker, daemon=True).start()
-        _worker_started = True
+        if not _worker_started:
+            for _ in range(_NUM_WORKERS):
+                threading.Thread(target=_worker, daemon=True).start()
+            _worker_started = True
     return task_id
 
 
