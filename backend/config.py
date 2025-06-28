@@ -13,6 +13,10 @@ if not os.path.exists(CONFIG_FILE) and os.path.exists(LEGACY_CONFIG):
 DEFAULT_CONFIG = {
     "theme": "dark",
     "default_format": "video",
+    # Maximum log file size in bytes before rotation
+    "log_max_bytes": 1_000_000,
+    # Number of rotated log files to keep
+    "log_backup_count": 3,
 }
 
 
@@ -22,7 +26,12 @@ def load_config():
         return DEFAULT_CONFIG
     try:
         with open(CONFIG_FILE, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+        # Inject any missing keys from the default configuration
+        merged = {**DEFAULT_CONFIG, **data}
+        if merged != data:
+            save_config(merged)
+        return merged
     except Exception:
         save_config(DEFAULT_CONFIG)
         return DEFAULT_CONFIG

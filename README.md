@@ -103,14 +103,17 @@ Read or update the contents of `backend/config.json`. Example default configurat
 {
   "theme": "dark",
   "default_format": "video",
+  "log_max_bytes": 1000000,
+  "log_backup_count": 3
 }
 ```
 
 ## Logs
 Backend logs are written to `logs/backend.log` in addition to standard output.
-The log file is rotated automatically: when it reaches **1&nbsp;MB** it is
-archived and up to **3** old copies are kept. Check this directory if you
-encounter issues.
+By default the log file is rotated when it reaches **1&nbsp;MB** and up to
+**3** old copies are kept. These limits can be adjusted via the
+`log_max_bytes` and `log_backup_count` settings in `backend/config.json`.
+Check this directory if you encounter issues.
 
 ## Packaging
 After building the frontend you can package the application with tools such as `electron-packager` or `electron-builder` to create a standalone installer. The Electron app expects the build output in `electron/dist/public/index.html`, so ensure the `npm run build` step is executed before packaging. Packaging steps are not included in this repository.
