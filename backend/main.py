@@ -76,13 +76,8 @@ async def get_config():
 
 
 @app.post("/config/")
-async def update_config(config: dict):
-    try:
-        validated = ConfigUpdate(**config)
-        save_config(validated.dict())
-    except (TypeError, ValueError) as exc:
-        # Catch JSON serialization errors and Pydantic validation issues
-        raise HTTPException(status_code=400, detail="Invalid configuration") from exc
+async def update_config(config: ConfigUpdate):
+    save_config(config.model_dump())
     return {"status": "ok"}
 
 
