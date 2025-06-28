@@ -59,8 +59,10 @@ def _worker() -> None:
     while True:
         task_id = url = fmt = out_dir = None
         status = "error"
+        got_item = False
         try:
             task_id, url, fmt, out_dir = _queue.get()
+            got_item = True
             os.makedirs(out_dir, exist_ok=True)  # output directory creation
             output_template = os.path.join(out_dir, "%(title)s.%(ext)s")
 
@@ -117,6 +119,7 @@ def _worker() -> None:
                     _history[task_id] = entry
                     _save_history()
                     _progress.pop(task_id, None)
+            if got_item:
                 _queue.task_done()
 
 
