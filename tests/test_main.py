@@ -1,6 +1,8 @@
 import sys
 from pathlib import Path
-from fastapi.testclient import TestClient
+import pytest
+import pytest_asyncio
+from httpx import AsyncClient, ASGITransport
 from unittest.mock import patch
 
 # Ensure backend modules can be imported
@@ -9,28 +11,33 @@ sys.path.insert(0, str(backend_path))
 
 from main import app  # noqa: E402
 
-client = TestClient(app)
+@pytest_asyncio.fixture
+async def client():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        yield client
 
 
-def test_download_invalid_format(tmp_path):
+@pytest.mark.asyncio
+async def test_download_invalid_format(client, tmp_path):
     data = {
         "url": "https://example.com",
         "format": "invalid",
         "output_dir": str(tmp_path),
     }
-    response = client.post("/download/", json=data)
+    response = await client.post("/download/", json=data)
     assert response.status_code == 400
     assert "format" in response.json()["detail"].lower()
 
 
-def test_download_valid_format(tmp_path):
+@pytest.mark.asyncio
+async def test_download_valid_format(client, tmp_path):
     with patch("main.enqueue_download", return_value="123") as mock_enqueue:
         data = {
             "url": "https://example.com",
             "format": "video",
             "output_dir": str(tmp_path),
         }
-        response = client.post("/download/", json=data)
+        response = await client.post("/download/", json=data)
         assert response.status_code == 200
         assert response.json() == {"status": "queued", "task_id": "123"}
         mock_enqueue.assert_called_with(

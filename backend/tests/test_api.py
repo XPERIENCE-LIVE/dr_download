@@ -1,56 +1,67 @@
 import sys
+import pytest
+import pytest_asyncio
 from pathlib import Path
 from unittest.mock import patch
-from fastapi.testclient import TestClient
+from httpx import AsyncClient, ASGITransport
 
 backend_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_path))
 
 from main import app  # noqa: E402
 
-client = TestClient(app)
+@pytest_asyncio.fixture
+async def client():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+        yield client
 
 
-def test_post_download(tmp_path):
+@pytest.mark.asyncio
+async def test_post_download(client, tmp_path):
     with patch("main.enqueue_download", return_value="tid") as enq:
         data = {
             "url": "http://example.com",
             "format": "audio",
             "output_dir": str(tmp_path),
         }
-        resp = client.post("/download/", json=data)
+        resp = await client.post("/download/", json=data)
         assert resp.status_code == 200
         assert resp.json() == {"status": "queued", "task_id": "tid"}
         enq.assert_called_with("http://example.com", "audio", str(tmp_path))
 
 
-def test_get_progress_endpoint():
+@pytest.mark.asyncio
+async def test_get_progress_endpoint(client):
     with patch("main.get_progress", return_value=55) as gp:
-        resp = client.get("/progress/abc")
+        resp = await client.get("/progress/abc")
         assert resp.status_code == 200
         assert resp.json() == {"progress": 55}
         gp.assert_called_with("abc")
 
 
-def test_update_config_valid():
+@pytest.mark.asyncio
+async def test_update_config_valid(client):
     with patch("main.save_config") as save:
         data = {"theme": "light", "default_format": "audio"}
-        resp = client.post("/config/", json=data)
+        resp = await client.post("/config/", json=data)
         assert resp.status_code == 200
         assert resp.json() == {"status": "ok"}
         save.assert_called_with({"theme": "light", "default_format": "audio"})
 
 
-def test_update_config_invalid_type():
+@pytest.mark.asyncio
+async def test_update_config_invalid_type(client):
     with patch("main.save_config") as save:
         data = {"theme": "light", "default_format": ["invalid"]}
-        resp = client.post("/config/", json=data)
+        resp = await client.post("/config/", json=data)
         assert resp.status_code == 400
         save.assert_not_called()
 
 
-def test_update_config_serialization_error():
+@pytest.mark.asyncio
+async def test_update_config_serialization_error(client):
     with patch("main.save_config", side_effect=TypeError("boom")):
         data = {"theme": "dark", "default_format": "video"}
-        resp = client.post("/config/", json=data)
+        resp = await client.post("/config/", json=data)
         assert resp.status_code == 400
+
