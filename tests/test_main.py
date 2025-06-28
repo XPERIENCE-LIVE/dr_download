@@ -5,11 +5,12 @@ import pytest_asyncio
 from httpx import AsyncClient, ASGITransport
 from unittest.mock import patch
 
-# Ensure backend modules can be imported
-backend_path = Path(__file__).resolve().parent.parent / "backend"
-sys.path.insert(0, str(backend_path))
+# Ensure backend package can be imported
+repo_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(repo_root))
 
-from main import app  # noqa: E402
+import backend.main as main  # noqa: E402
+app = main.app
 
 @pytest_asyncio.fixture
 async def client():
@@ -31,7 +32,7 @@ async def test_download_invalid_format(client, tmp_path):
 
 @pytest.mark.asyncio
 async def test_download_valid_format(client, tmp_path):
-    with patch("main.enqueue_download", return_value="123") as mock_enqueue:
+    with patch("backend.main.enqueue_download", return_value="123") as mock_enqueue:
         data = {
             "url": "https://example.com",
             "format": "video",

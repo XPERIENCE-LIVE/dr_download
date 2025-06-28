@@ -5,10 +5,11 @@ from pathlib import Path
 from unittest.mock import patch
 from httpx import AsyncClient, ASGITransport
 
-backend_path = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(backend_path))
+repo_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(repo_root))
 
-from main import app  # noqa: E402
+import backend.main as main  # noqa: E402
+app = main.app
 
 @pytest_asyncio.fixture
 async def client():
@@ -18,7 +19,7 @@ async def client():
 
 @pytest.mark.asyncio
 async def test_post_download(client, tmp_path):
-    with patch("main.enqueue_download", return_value="tid") as enq:
+    with patch("backend.main.enqueue_download", return_value="tid") as enq:
         data = {
             "url": "http://example.com",
             "format": "audio",
@@ -32,7 +33,7 @@ async def test_post_download(client, tmp_path):
 
 @pytest.mark.asyncio
 async def test_get_progress_endpoint(client):
-    with patch("main.get_progress", return_value=55) as gp:
+    with patch("backend.main.get_progress", return_value=55) as gp:
         resp = await client.get("/progress/abc")
         assert resp.status_code == 200
         assert resp.json() == {"progress": 55}
@@ -41,7 +42,7 @@ async def test_get_progress_endpoint(client):
 
 @pytest.mark.asyncio
 async def test_update_config_valid(client):
-    with patch("main.save_config") as save:
+    with patch("backend.main.save_config") as save:
         data = {"theme": "light", "default_format": "audio"}
         resp = await client.post("/config/", json=data)
         assert resp.status_code == 200
@@ -51,7 +52,7 @@ async def test_update_config_valid(client):
 
 @pytest.mark.asyncio
 async def test_update_config_invalid_type(client):
-    with patch("main.save_config") as save:
+    with patch("backend.main.save_config") as save:
         data = {"theme": "light", "default_format": ["invalid"]}
         resp = await client.post("/config/", json=data)
         assert resp.status_code == 400
@@ -60,7 +61,7 @@ async def test_update_config_invalid_type(client):
 
 @pytest.mark.asyncio
 async def test_update_config_serialization_error(client):
-    with patch("main.save_config", side_effect=TypeError("boom")):
+    with patch("backend.main.save_config", side_effect=TypeError("boom")):
         data = {"theme": "dark", "default_format": "video"}
         resp = await client.post("/config/", json=data)
         assert resp.status_code == 400

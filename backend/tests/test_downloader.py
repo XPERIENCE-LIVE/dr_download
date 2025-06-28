@@ -2,7 +2,7 @@ from queue import Queue
 
 import pytest
 
-import downloader
+import backend.downloader as downloader
 
 
 @pytest.fixture(autouse=True)
