@@ -59,7 +59,9 @@ npm start -- --no-sandbox
 When the UI appears, use **Choose...** to pick an output directory. The path field is empty by default.
 
 On Windows you may double‑click `run_progressia_downloader.cmd` to install
-any missing dependencies and launch Electron automatically.
+any missing dependencies and launch Electron automatically. The script skips
+`npm update` by default but you can enable it by setting the environment
+variable `DD_RUN_NPM_UPDATE=1` before running the command.
 ### Running Tests
 Install dependencies and run the unit tests with [pytest](https://pytest.org/):
 ```bash

@@ -18,8 +18,10 @@ if not exist node_modules (
     echo Dependencias no encontradas. Instalando...
     call npm install
 
-    echo Actualizando dependencias...
-    call npm update
+    if defined DD_RUN_NPM_UPDATE (
+        echo Actualizando dependencias...
+        call npm update
+    )
     REM Ejecuta "npm audit" manualmente para revisar vulnerabilidades
 REM     call npm audit fix --force
 ) else (
