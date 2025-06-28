@@ -41,6 +41,7 @@ Dr. Download 2.0 is a desktop application developed by **PROGRESSIA** for downlo
    ```bash
    npm run build
    ```
+   The generated `index.html` is located at `electron/dist/public/index.html`.
 3. Create an `.env` file inside `electron` to override the API base URL if the backend runs elsewhere:
    ```
    VITE_API_BASE_URL=http://your-api-host:8000
@@ -91,7 +92,7 @@ Read or update the contents of `config.json`. Example default configuration:
 Backend logs are written to `logs/backend.log` in addition to standard output. Inspect this file if you encounter issues.
 
 ## Packaging
-After building the frontend you can package the application with tools such as `electron-packager` or `electron-builder` to create a standalone installer. Packaging steps are not included in this repository.
+After building the frontend you can package the application with tools such as `electron-packager` or `electron-builder` to create a standalone installer. The Electron app expects the build output in `electron/dist/public/index.html`, so ensure the `npm run build` step is executed before packaging. Packaging steps are not included in this repository.
 
 ## Contributing
 Contributions and bug reports are welcome. Feel free to open an issue or PR.
