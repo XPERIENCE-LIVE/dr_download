@@ -3,3 +3,5 @@ electron/dist/
 backend/__pycache__/
 *.pyc
 *.log
+backend/config.json
+backend/history.json
