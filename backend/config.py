@@ -10,9 +10,7 @@ if not os.path.exists(CONFIG_FILE) and os.path.exists(LEGACY_CONFIG):
     os.replace(LEGACY_CONFIG, CONFIG_FILE)
 DEFAULT_CONFIG = {
     "theme": "dark",
-    "max_downloads": 5,
     "default_format": "video",
-    "check_updates": True
 }
 
 

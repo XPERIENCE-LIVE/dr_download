@@ -82,9 +82,7 @@ Read or update the contents of `backend/config.json`. Example default configurat
 ```json
 {
   "theme": "dark",
-  "max_downloads": 5,
   "default_format": "video",
-  "check_updates": true
 }
 ```
 
