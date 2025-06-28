@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from fastapi.middleware.cors import CORSMiddleware
 from .downloader import enqueue_download, get_progress, get_history
 from .config import load_config, save_config
@@ -21,8 +21,7 @@ class ConfigUpdate(BaseModel):
     theme: str
     default_format: str
 
-    class Config:
-        extra = "allow"
+    model_config = ConfigDict(extra="allow")
 
 
 origins_env = os.getenv("ALLOW_ORIGINS")
