@@ -64,9 +64,10 @@ any missing dependencies and launch Electron automatically. The script skips
 variable `DD_RUN_NPM_UPDATE=1` before running the command.
 
 ### Linting
-Check the React source code with ESLint:
+Check the React source code with ESLint. Make sure the Node dependencies are installed first:
 ```bash
 cd electron
+npm install
 npm run lint
 ```
 ### Running Tests

@@ -153,3 +153,4 @@ def shutdown_workers() -> None:
     _workers.clear()
     global _worker_started
     _worker_started = False
+    stop_event.clear()
