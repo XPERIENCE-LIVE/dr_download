@@ -76,7 +76,9 @@ def _worker() -> None:
 
             def progress_hook(d: dict) -> None:
                 if d.get("status") == "downloading":
-                    total = d.get("total_bytes") or d.get("total_bytes_estimate")
+                    total = d.get("total_bytes") or d.get(
+                        "total_bytes_estimate"
+                    )
                     downloaded = d.get("downloaded_bytes", 0)
                     if total:
                         percent = int(downloaded / total * 100)
@@ -107,7 +109,9 @@ def _worker() -> None:
         except Empty:
             continue
         except Exception:
-            logging.exception("Unexpected error while processing task %s", task_id)
+            logging.exception(
+                "Unexpected error while processing task %s", task_id
+            )
             status = "error"
         finally:
             if task_id is not None:

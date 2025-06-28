@@ -19,7 +19,9 @@ def reset_state(monkeypatch):
 
 
 def test_enqueue_download(tmp_path):
-    task_id = downloader.enqueue_download("http://example.com", "video", str(tmp_path))
+    task_id = downloader.enqueue_download(
+        "http://example.com", "video", str(tmp_path)
+    )
     assert task_id in downloader._progress
     assert task_id in downloader._history
     queued = downloader._queue.get_nowait()

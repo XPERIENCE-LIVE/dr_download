@@ -12,10 +12,14 @@ sys.path.insert(0, str(repo_root))
 import backend.main as main  # noqa: E402
 app = main.app
 
+
 @pytest_asyncio.fixture
 async def client():
     transport = ASGITransport(app=app, raise_app_exceptions=False)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://testserver",
+    ) as client:
         yield client
 
 
@@ -33,7 +37,9 @@ async def test_download_invalid_format(client, tmp_path):
 
 @pytest.mark.asyncio
 async def test_download_valid_format(client, tmp_path):
-    with patch("backend.main.enqueue_download", return_value="123") as mock_enqueue:
+    with patch(
+        "backend.main.enqueue_download", return_value="123"
+    ) as mock_enqueue:
         data = {
             "url": "https://example.com",
             "format": "video",

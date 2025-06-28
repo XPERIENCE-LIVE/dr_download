@@ -11,10 +11,14 @@ sys.path.insert(0, str(repo_root))
 import backend.main as main  # noqa: E402
 app = main.app
 
+
 @pytest_asyncio.fixture
 async def client():
     transport = ASGITransport(app=app, raise_app_exceptions=False)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+    async with AsyncClient(
+        transport=transport,
+        base_url="http://testserver",
+    ) as client:
         yield client
 
 
@@ -66,4 +70,3 @@ async def test_update_config_serialization_error(client):
         data = {"theme": "dark", "default_format": "video"}
         resp = await client.post("/config/", json=data)
         assert resp.status_code == 500
-
