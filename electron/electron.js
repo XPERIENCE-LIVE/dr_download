@@ -12,7 +12,10 @@ function createWindow() {
     }
   });
 
-  win.loadFile(path.join(__dirname, "dist", "public", "index.html"));
+  // The compiled React app outputs index.html in dist/public
+  // Use an absolute path so packaged builds work reliably
+  const indexPath = path.resolve(__dirname, "dist", "public", "index.html");
+  win.loadFile(indexPath);
 }
 
 ipcMain.handle('select-folder', async () => {
