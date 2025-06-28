@@ -62,6 +62,13 @@ On Windows you may double‑click `run_progressia_downloader.cmd` to install
 any missing dependencies and launch Electron automatically. The script skips
 `npm update` by default but you can enable it by setting the environment
 variable `DD_RUN_NPM_UPDATE=1` before running the command.
+
+### Linting
+Check the React source code with ESLint:
+```bash
+cd electron
+npm run lint
+```
 ### Running Tests
 Install dependencies and run the unit tests with [pytest](https://pytest.org/):
 ```bash

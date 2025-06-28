@@ -5,7 +5,8 @@
   "scripts": {
     "start": "electron .",
     "dev": "vite",
-    "build": "vite build"
+    "build": "vite build",
+    "lint": "eslint . --ext .js,.jsx"
   },
   "dependencies": {
     "axios": "^1.4.0",
@@ -15,6 +16,8 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.5.2",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "eslint": "^8.57.0",
+    "eslint-plugin-react": "^7.33.2"
   }
 }
