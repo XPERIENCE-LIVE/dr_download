@@ -13,7 +13,11 @@ client = TestClient(app)
 
 def test_post_download(tmp_path):
     with patch("main.enqueue_download", return_value="tid") as enq:
-        data = {"url": "http://example.com", "format": "audio", "output_dir": str(tmp_path)}
+        data = {
+            "url": "http://example.com",
+            "format": "audio",
+            "output_dir": str(tmp_path),
+        }
         resp = client.post("/download/", json=data)
         assert resp.status_code == 200
         assert resp.json() == {"status": "queued", "task_id": "tid"}
