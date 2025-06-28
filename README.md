@@ -5,7 +5,7 @@ Dr. Download 2.0 is a desktop application developed by **PROGRESSIA** for downlo
 ## Features
 - Queue multiple downloads and monitor their progress.
 - Choose between video or audio (MP3) output.
-- Simple configuration stored in `config.json`.
+- Simple configuration stored in `backend/config.json`.
 - Cross‑platform desktop UI built with Electron.
 
 ## Requirements
@@ -78,7 +78,7 @@ Retrieve the current progress percentage for a task.
 List details of all queued and finished downloads.
 
 ### `GET /config/` and `POST /config/`
-Read or update the contents of `config.json`. Example default configuration:
+Read or update the contents of `backend/config.json`. Example default configuration:
 ```json
 {
   "theme": "dark",
