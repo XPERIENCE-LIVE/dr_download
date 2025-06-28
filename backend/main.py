@@ -38,6 +38,11 @@ app.add_middleware(
 
 @app.post("/download/")
 async def download_media(request: DownloadRequest):
+    if request.format not in ("audio", "video"):
+        raise HTTPException(
+            status_code=400,
+            detail="Format must be 'audio' or 'video'",
+        )
     if not request.output_dir or not os.path.isdir(request.output_dir):
         raise HTTPException(
             status_code=400,
