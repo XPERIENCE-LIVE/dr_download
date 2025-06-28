@@ -52,7 +52,7 @@ From the `electron` directory run:
 ```bash
 npm start
 ```
-If you must run the command as `root`, append `--no-sandbox`:
+Running the app as `root` will fail with a sandbox error. Either invoke the command as a regular user or append `--no-sandbox` when running as `root`:
 ```bash
 npm start -- --no-sandbox
 ```
