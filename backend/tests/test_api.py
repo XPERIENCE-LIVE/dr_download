@@ -30,3 +30,27 @@ def test_get_progress_endpoint():
         assert resp.status_code == 200
         assert resp.json() == {"progress": 55}
         gp.assert_called_with("abc")
+
+
+def test_update_config_valid():
+    with patch("main.save_config") as save:
+        data = {"theme": "light", "default_format": "audio"}
+        resp = client.post("/config/", json=data)
+        assert resp.status_code == 200
+        assert resp.json() == {"status": "ok"}
+        save.assert_called_with({"theme": "light", "default_format": "audio"})
+
+
+def test_update_config_invalid_type():
+    with patch("main.save_config") as save:
+        data = {"theme": "light", "default_format": ["invalid"]}
+        resp = client.post("/config/", json=data)
+        assert resp.status_code == 400
+        save.assert_not_called()
+
+
+def test_update_config_serialization_error():
+    with patch("main.save_config", side_effect=TypeError("boom")):
+        data = {"theme": "dark", "default_format": "video"}
+        resp = client.post("/config/", json=data)
+        assert resp.status_code == 400
