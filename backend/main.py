@@ -17,6 +17,14 @@ class DownloadRequest(BaseModel):
     output_dir: str
 
 
+class ConfigUpdate(BaseModel):
+    theme: str
+    default_format: str
+
+    class Config:
+        extra = "allow"
+
+
 origins_env = os.getenv("ALLOW_ORIGINS")
 if origins_env:
     allowed_origins = [
@@ -69,7 +77,12 @@ async def get_config():
 
 @app.post("/config/")
 async def update_config(config: dict):
-    save_config(config)
+    try:
+        validated = ConfigUpdate(**config)
+        save_config(validated.dict())
+    except (TypeError, ValueError) as exc:
+        # Catch JSON serialization errors and Pydantic validation issues
+        raise HTTPException(status_code=400, detail="Invalid configuration") from exc
     return {"status": "ok"}
 
 
