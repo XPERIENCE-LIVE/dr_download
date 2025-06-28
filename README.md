@@ -59,6 +59,9 @@ npm start -- --no-sandbox
 ```
 When the UI appears, use **Choose...** to pick an output directory. The path field is empty by default.
 
+On Windows you may double‑click `run_progressia_downloader.cmd` to install
+any missing dependencies and launch Electron automatically.
+
 ## API Reference
 
 ### `POST /download/`

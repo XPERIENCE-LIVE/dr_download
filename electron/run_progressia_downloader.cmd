@@ -1,6 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
 
+REM Convenience launcher for Dr. Download 2.0 on Windows
+REM Installs Node.js dependencies if missing and then starts the app
+
 cd /d "%~dp0"
 
 echo.
