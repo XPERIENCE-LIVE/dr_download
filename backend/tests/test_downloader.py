@@ -1,5 +1,3 @@
-import builtins
-import os
 from queue import Queue
 
 import pytest
@@ -16,8 +14,11 @@ def reset_state(monkeypatch):
     monkeypatch.setattr(downloader, "_save_history", lambda: None)
     yield
 
+
 def test_enqueue_download(tmp_path):
-    task_id = downloader.enqueue_download("http://example.com", "video", str(tmp_path))
+    task_id = downloader.enqueue_download(
+        "http://example.com", "video", str(tmp_path)
+    )
     assert task_id in downloader._progress
     assert task_id in downloader._history
     queued = downloader._queue.get_nowait()
