@@ -6,3 +6,4 @@ tests/__pycache__/
 *.log
 backend/config.json
 backend/history.json
+logs/
