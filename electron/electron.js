@@ -15,7 +15,11 @@ function createWindow() {
   // The compiled React app outputs index.html in dist/public
   // Use an absolute path so packaged builds work reliably
   const indexPath = path.resolve(__dirname, "dist", "public", "index.html");
-  win.loadFile(indexPath);
+  if (require("fs").existsSync(indexPath)) {
+    win.loadFile(indexPath);
+  } else {
+    win.loadURL("data:text/html,Please run 'npm run build' first.");
+  }
 }
 
 ipcMain.handle('select-folder', async () => {
