@@ -72,7 +72,7 @@ npm run lint
 ### Running Tests
 Install dependencies and run the unit tests with [pytest](https://pytest.org/):
 ```bash
-pip install -r backend/requirements.txt httpx==0.27.* pytest
+pip install -r backend/requirements.txt pytest
 pytest
 ```
 
