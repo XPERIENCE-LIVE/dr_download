@@ -25,10 +25,9 @@ Dr. Download 2.0 is a desktop application developed by **PROGRESSIA** for downlo
    python -m py_compile backend/*.py
    ```
 3. You may set the environment variable `ALLOW_ORIGINS` to a comma‑separated list of hosts allowed for CORS. By default the backend allows `http://localhost:3000` and `http://localhost:5173`.
-4. Start the API server:
+4. Start the API server from the repository root:
    ```bash
-   cd backend
-   uvicorn main:app --host 127.0.0.1 --port 8000
+   python -m backend.main
    ```
 
 ### Frontend Setup
