@@ -1,4 +1,5 @@
 from queue import Queue
+import threading
 
 import pytest
 
@@ -11,14 +12,14 @@ def reset_state(monkeypatch):
     monkeypatch.setattr(downloader, "_progress", {})
     monkeypatch.setattr(downloader, "_history", {})
     monkeypatch.setattr(downloader, "_worker_started", True)
+    monkeypatch.setattr(downloader, "stop_event", threading.Event())
+    monkeypatch.setattr(downloader, "_workers", [])
     monkeypatch.setattr(downloader, "_save_history", lambda: None)
     yield
 
 
 def test_enqueue_download(tmp_path):
-    task_id = downloader.enqueue_download(
-        "http://example.com", "video", str(tmp_path)
-    )
+    task_id = downloader.enqueue_download("http://example.com", "video", str(tmp_path))
     assert task_id in downloader._progress
     assert task_id in downloader._history
     queued = downloader._queue.get_nowait()
@@ -42,7 +43,7 @@ def test_worker_handles_queue_get_failure(monkeypatch):
         def __init__(self):
             self.calls = 0
 
-        def get(self):
+        def get(self, timeout=None):
             self.calls += 1
             if self.calls == 1:
                 raise Exception("boom")
