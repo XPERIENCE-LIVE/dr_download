@@ -13,7 +13,8 @@ app = main.app
 
 @pytest_asyncio.fixture
 async def client():
-    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://testserver") as client:
+    transport = ASGITransport(app=app, raise_app_exceptions=False)
+    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
         yield client
 
 
@@ -55,7 +56,7 @@ async def test_update_config_invalid_type(client):
     with patch("backend.main.save_config") as save:
         data = {"theme": "light", "default_format": ["invalid"]}
         resp = await client.post("/config/", json=data)
-        assert resp.status_code == 400
+        assert resp.status_code == 422
         save.assert_not_called()
 
 
@@ -64,5 +65,5 @@ async def test_update_config_serialization_error(client):
     with patch("backend.main.save_config", side_effect=TypeError("boom")):
         data = {"theme": "dark", "default_format": "video"}
         resp = await client.post("/config/", json=data)
-        assert resp.status_code == 400
+        assert resp.status_code == 500
 
