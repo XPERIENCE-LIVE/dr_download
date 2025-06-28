@@ -1,4 +1,5 @@
 import logging
+from logging.handlers import RotatingFileHandler
 import os
 
 
@@ -8,7 +9,11 @@ def setup_logging():
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
-            logging.FileHandler(os.path.join("logs", "backend.log")),
+            RotatingFileHandler(
+                os.path.join("logs", "backend.log"),
+                maxBytes=1_000_000,
+                backupCount=3,
+            ),
             logging.StreamHandler(),
         ],
     )
