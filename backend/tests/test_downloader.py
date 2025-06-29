@@ -81,3 +81,27 @@ def test_shutdown_workers_sends_sentinel(monkeypatch):
     downloader.shutdown_workers()
     assert puts == [downloader._SENTINEL, downloader._SENTINEL]
     assert downloader._workers == []
+
+
+def test_save_history_ioerror(monkeypatch, caplog, tmp_path):
+    import builtins
+    import importlib
+    import logging
+
+    dl = importlib.reload(downloader)
+
+    monkeypatch.setattr(dl, "_queue", Queue())
+    monkeypatch.setattr(dl, "_progress", {})
+    monkeypatch.setattr(dl, "_history", {})
+    monkeypatch.setattr(dl, "_worker_started", True)
+    monkeypatch.setattr(dl, "stop_event", threading.Event())
+    monkeypatch.setattr(dl, "_workers", [])
+    monkeypatch.setattr(dl, "HISTORY_FILE", str(tmp_path / "history.json"))
+
+    def bad_open(*args, **kwargs):
+        raise IOError("boom")
+
+    monkeypatch.setattr(builtins, "open", bad_open)
+    with caplog.at_level(logging.ERROR):
+        dl._save_history()
+        assert "Failed to write history file" in caplog.text
