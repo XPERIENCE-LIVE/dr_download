@@ -13,6 +13,7 @@ _state_lock = threading.Lock()
 _worker_started = False
 _NUM_WORKERS = 4
 stop_event = threading.Event()
+_SENTINEL = object()
 _workers: list[threading.Thread] = []
 HISTORY_FILE = os.path.join(os.path.dirname(__file__), "history.json")
 
@@ -64,12 +65,18 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
 
 
 def _worker() -> None:
-    while not stop_event.is_set():
+    while True:
+        if stop_event.is_set():
+            break
         task_id = url = fmt = out_dir = None
         status = "error"
         got_item = False
         try:
-            task_id, url, fmt, out_dir = _queue.get(timeout=0.1)
+            item = _queue.get(timeout=0.1)
+            if item is _SENTINEL:
+                _queue.task_done()
+                break
+            task_id, url, fmt, out_dir = item
             got_item = True
             os.makedirs(out_dir, exist_ok=True)  # output directory creation
             output_template = os.path.join(out_dir, "%(title)s.%(ext)s")
@@ -151,7 +158,11 @@ def get_history() -> dict[str, dict[str, str | int]]:
 
 def shutdown_workers() -> None:
     """Signal the worker threads to stop and wait for them to finish."""
+    if not _workers:
+        return
     stop_event.set()
+    for _ in _workers:
+        _queue.put(_SENTINEL)
     for t in list(_workers):
         t.join()
     _workers.clear()

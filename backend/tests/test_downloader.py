@@ -58,3 +58,23 @@ def test_worker_handles_queue_get_failure(monkeypatch):
 
     with pytest.raises(SystemExit):
         downloader._worker()
+
+
+def test_shutdown_workers_sends_sentinel(monkeypatch):
+    puts = []
+
+    class DummyQueue(Queue):
+        def put(self, item):
+            puts.append(item)
+
+    monkeypatch.setattr(downloader, "_queue", DummyQueue())
+    t1 = threading.Thread(target=lambda: None)
+    t2 = threading.Thread(target=lambda: None)
+    t1.start()
+    t2.start()
+    monkeypatch.setattr(downloader, "_workers", [t1, t2])
+    downloader.shutdown_workers()
+    assert puts == [downloader._SENTINEL, downloader._SENTINEL]
+    assert downloader._workers == []
+
+
