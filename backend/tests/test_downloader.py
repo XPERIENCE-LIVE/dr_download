@@ -2,6 +2,11 @@ from queue import Queue
 import threading
 
 import pytest
+import sys
+from pathlib import Path
+
+backend_path = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(backend_path))
 
 import backend.downloader as downloader
 
