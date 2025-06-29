@@ -42,7 +42,7 @@ Dr. Download 2.0 is a desktop application developed by **PROGRESSIA** for downlo
    npm run build
    ```
    The generated `index.html` is located at `electron/dist/public/index.html`.
-3. Create an `.env` file inside `electron` to override the API base URL if the backend runs elsewhere:
+3. Create an `.env` file inside `electron` to override the API base URL if the backend runs elsewhere. The React code reads this value from `import.meta.env.VITE_API_BASE_URL`:
    ```
    VITE_API_BASE_URL=http://your-api-host:8000
    ```
