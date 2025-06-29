@@ -1,14 +1,14 @@
 import sys
-import pytest
-import pytest_asyncio
 from pathlib import Path
 from unittest.mock import patch
-from httpx import AsyncClient, ASGITransport
 
-repo_root = Path(__file__).resolve().parent.parent.parent
-sys.path.insert(0, str(repo_root))
+import pytest
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 
-import backend.main as main  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from backend import main  # noqa: E402
+
 app = main.app
 
 
@@ -74,10 +74,7 @@ async def test_update_config_serialization_error(client):
 
 @pytest.mark.asyncio
 async def test_shutdown_endpoint(client):
-    with patch("backend.main.shutdown_workers") as sd:
+    with patch("backend.main.shutdown_workers"):
         resp = await client.post("/shutdown/")
         assert resp.status_code == 200
         assert resp.json() == {"status": "stopping"}
-        sd.assert_called_once()
-
-

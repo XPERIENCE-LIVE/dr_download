@@ -1,12 +1,20 @@
-import json
-import threading
-import os
-from queue import Queue, Empty
-import uuid
-import yt_dlp
-import logging
+"""Download queue and worker threads for media retrieval."""
 
-_queue: Queue[tuple[str, str, str, str]] = Queue()
+import json
+import logging
+import os
+import threading
+import uuid
+from queue import Empty, Queue
+
+import yt_dlp
+
+# Maximum number of queued downloads at once
+_MAX_QUEUE_SIZE = 100
+
+# Queue of download tasks. Each item is a tuple of
+# (task_id, url, format, output_dir)
+_queue: Queue[tuple[str, str, str, str]] = Queue(maxsize=_MAX_QUEUE_SIZE)
 _progress: dict[str, int] = {}
 _history: dict[str, dict[str, str | int]] = {}
 _state_lock = threading.Lock()
@@ -37,10 +45,12 @@ _load_history()
 
 
 def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
-    """Add a video URL to the download queue and return a task ID."""
+    """Add a new download request to the queue and return its task ID."""
     global _worker_started
     if stop_event.is_set():
         raise RuntimeError("Workers are shutting down")
+    if _queue.full():
+        raise RuntimeError("Download queue is full")
     task_id = str(uuid.uuid4())
     _queue.put((task_id, video_url, fmt, output_dir))
     with _state_lock:
@@ -65,6 +75,7 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
 
 
 def _worker() -> None:
+    """Process queued downloads until signalled to stop."""
     while True:
         if stop_event.is_set():
             break
@@ -78,14 +89,25 @@ def _worker() -> None:
                 break
             task_id, url, fmt, out_dir = item
             got_item = True
-            os.makedirs(out_dir, exist_ok=True)  # output directory creation
+            try:
+                os.makedirs(out_dir, exist_ok=True)
+            except OSError as exc:
+                logging.error(
+                    "Cannot create output directory %s: %s",
+                    out_dir,
+                    exc,
+                )
+                status = "error"
+                _queue.task_done()
+                got_item = False
+                continue
             output_template = os.path.join(out_dir, "%(title)s.%(ext)s")
 
             def progress_hook(d: dict) -> None:
                 if d.get("status") == "downloading":
                     total = d.get("total_bytes") or d.get(
                         "total_bytes_estimate"
-                    )
+                    )  # noqa: E501
                     downloaded = d.get("downloaded_bytes", 0)
                     if total:
                         percent = int(downloaded / total * 100)
@@ -115,10 +137,13 @@ def _worker() -> None:
             status = "done"
         except Empty:
             continue
+        except yt_dlp.utils.DownloadError as exc:
+            logging.error("Download failed for %s: %s", url, exc)
+            status = "error"
         except Exception:
             logging.exception(
                 "Unexpected error while processing task %s", task_id
-            )
+            )  # noqa: E501
             status = "error"
         finally:
             if task_id is not None:
@@ -164,7 +189,9 @@ def shutdown_workers() -> None:
     for _ in _workers:
         _queue.put(_SENTINEL)
     for t in list(_workers):
-        t.join()
+        t.join(timeout=5)
+        if t.is_alive():
+            logging.warning("Worker thread %s did not exit in time", t.name)
     _workers.clear()
     global _worker_started
     _worker_started = False
