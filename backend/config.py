@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 
 # Config file stored alongside this module
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
@@ -32,7 +33,10 @@ def load_config():
         if merged != data:
             save_config(merged)
         return merged
-    except Exception:
+    except Exception as exc:
+        logging.warning(
+            "Failed to load config file %s: %s; using defaults", CONFIG_FILE, exc
+        )
         save_config(DEFAULT_CONFIG)
         return DEFAULT_CONFIG
 
