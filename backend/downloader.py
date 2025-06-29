@@ -32,7 +32,12 @@ def _load_history() -> None:
         try:
             with open(HISTORY_FILE, "r") as f:
                 _history = json.load(f)
-        except Exception:
+        except Exception as exc:
+            logging.warning(
+                "Failed to load history file %s: %s; starting fresh",
+                HISTORY_FILE,
+                exc,
+            )
             _history = {}
 
 

@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+import logging
 
 backend_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_path))
@@ -32,3 +33,19 @@ def test_load_config_defaults(tmp_path, monkeypatch):
     assert cfg_loaded["log_max_bytes"] == config.DEFAULT_CONFIG["log_max_bytes"]  # noqa: E501
     assert cfg_loaded["log_backup_count"] == config.DEFAULT_CONFIG["log_backup_count"]  # noqa: E501
     # fmt: on
+
+
+def test_load_config_logs_warning_on_malformed(tmp_path, monkeypatch, caplog):
+    cfg_file = tmp_path / "config.json"
+    monkeypatch.setattr(config, "CONFIG_FILE", str(cfg_file))
+    monkeypatch.setattr(config, "LEGACY_CONFIG", str(tmp_path / "legacy.json"))
+
+    cfg_file.write_text("{bad json}")
+
+    with caplog.at_level(logging.WARNING):
+        cfg = config.load_config()
+
+    assert cfg == config.DEFAULT_CONFIG
+    assert any(
+        "Failed to load config file" in rec.message for rec in caplog.records
+    )
