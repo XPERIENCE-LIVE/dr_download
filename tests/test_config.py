@@ -22,6 +22,7 @@ def test_load_config_defaults(tmp_path, monkeypatch):
     cfg = config.load_config()
     assert cfg["log_max_bytes"] == config.DEFAULT_CONFIG["log_max_bytes"]
     assert cfg["log_backup_count"] == config.DEFAULT_CONFIG["log_backup_count"]
+    assert cfg["worker_threads"] == config.DEFAULT_CONFIG["worker_threads"]
 
     # Save partial config and reload
     partial = {"theme": "light"}
@@ -32,6 +33,7 @@ def test_load_config_defaults(tmp_path, monkeypatch):
     assert cfg_loaded["default_format"] == config.DEFAULT_CONFIG["default_format"]  # noqa: E501
     assert cfg_loaded["log_max_bytes"] == config.DEFAULT_CONFIG["log_max_bytes"]  # noqa: E501
     assert cfg_loaded["log_backup_count"] == config.DEFAULT_CONFIG["log_backup_count"]  # noqa: E501
+    assert cfg_loaded["worker_threads"] == config.DEFAULT_CONFIG["worker_threads"]  # noqa: E501
     # fmt: on
 
 
