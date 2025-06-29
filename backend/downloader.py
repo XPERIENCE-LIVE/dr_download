@@ -7,6 +7,8 @@ import threading
 import uuid
 from queue import Empty, Queue
 
+from .config import DEFAULT_CONFIG, load_config
+
 import yt_dlp
 
 # Maximum number of queued downloads at once
@@ -21,7 +23,7 @@ _history: dict[str, dict[str, str | int]] = {}
 _MAX_HISTORY_LEN = 1000
 _state_lock = threading.Lock()
 _worker_started = False
-_NUM_WORKERS = 4
+_NUM_WORKERS = DEFAULT_CONFIG["worker_threads"]
 stop_event = threading.Event()
 _SENTINEL = object()
 _workers: list[threading.Thread] = []
@@ -77,7 +79,9 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
         }
         _save_history()
         if not _worker_started and not stop_event.is_set():
-            for _ in range(_NUM_WORKERS):
+            cfg = load_config()
+            num_workers = cfg.get("worker_threads", _NUM_WORKERS)
+            for _ in range(num_workers):
                 if stop_event.is_set():
                     break
                 t = threading.Thread(target=_worker, daemon=True)

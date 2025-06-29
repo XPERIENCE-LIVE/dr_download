@@ -106,6 +106,7 @@ Read or update the contents of `backend/config.json`. Example default configurat
 {
   "theme": "dark",
   "default_format": "video",
+  "worker_threads": 4,
   "log_max_bytes": 1000000,
   "log_backup_count": 3
 }

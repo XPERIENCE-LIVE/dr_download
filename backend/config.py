@@ -14,6 +14,8 @@ if not os.path.exists(CONFIG_FILE) and os.path.exists(LEGACY_CONFIG):
 DEFAULT_CONFIG = {
     "theme": "dark",
     "default_format": "video",
+    # Number of worker threads for downloads
+    "worker_threads": 4,
     # Maximum log file size in bytes before rotation
     "log_max_bytes": 1_000_000,
     # Number of rotated log files to keep
