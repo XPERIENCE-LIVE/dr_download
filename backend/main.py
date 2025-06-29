@@ -1,10 +1,18 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Request
+from pydantic import BaseModel, HttpUrl, ValidationError
+try:
+    from pydantic import TypeAdapter
+except ImportError:  # pragma: no cover - pydantic<2
+    TypeAdapter = None
+    from pydantic import parse_obj_as
 try:
     from pydantic import ConfigDict
 except ImportError:  # pragma: no cover - pydantic<2
     ConfigDict = None
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+from fastapi.responses import JSONResponse
 from .downloader import (
     enqueue_download,
     get_progress,
@@ -20,10 +28,46 @@ setup_logging()
 app = FastAPI()
 
 
+@app.exception_handler(RequestValidationError)
+async def download_validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return 400 for malformed download URLs."""
+    if request.url.path == "/download/":
+        for err in exc.errors():
+            if "url" in err.get("loc", []):
+                return JSONResponse(status_code=400, content={"detail": "Malformed URL"})
+    return await request_validation_exception_handler(request, exc)
+
+
 class DownloadRequest(BaseModel):
     url: str
     format: str
     output_dir: str
+
+    if hasattr(BaseModel, "model_validate"):
+        # pydantic v2
+        from pydantic import field_validator
+
+        @field_validator("url")
+        @classmethod
+        def validate_url(cls, v: str) -> str:
+            try:
+                if TypeAdapter:
+                    TypeAdapter(HttpUrl).validate_python(v)
+                else:  # pragma: no cover - pydantic<2
+                    parse_obj_as(HttpUrl, v)
+            except ValidationError:
+                raise ValueError("Invalid URL")
+            return v
+    else:  # pragma: no cover - pydantic<2
+        from pydantic import validator, parse_obj_as
+
+        @validator("url")
+        def validate_url(cls, v: str) -> str:
+            try:
+                parse_obj_as(HttpUrl, v)
+            except ValidationError:
+                raise ValueError("Invalid URL")
+            return v
 
 
 class ConfigUpdate(BaseModel):

@@ -38,6 +38,20 @@ async def test_download_invalid_format(client, tmp_path):
 
 
 @pytest.mark.asyncio
+async def test_download_invalid_url(client, tmp_path):
+    with patch("backend.main.enqueue_download") as mock_enqueue:
+        data = {
+            "url": "not a url",
+            "format": "audio",
+            "output_dir": str(tmp_path),
+        }
+        response = await client.post("/download/", json=data)
+        assert response.status_code == 400
+        assert "url" in response.json()["detail"].lower()
+        mock_enqueue.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_download_valid_format(client, tmp_path):
     with patch(
         "backend.main.enqueue_download",
