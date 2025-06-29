@@ -1,5 +1,9 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
+try:
+    from pydantic import ConfigDict
+except ImportError:  # pragma: no cover - pydantic<2
+    ConfigDict = None
 from fastapi.middleware.cors import CORSMiddleware
 from .downloader import (
     enqueue_download,
@@ -26,7 +30,11 @@ class ConfigUpdate(BaseModel):
     theme: str
     default_format: str
 
-    model_config = ConfigDict(extra="allow")
+    if hasattr(BaseModel, "model_dump"):  # pydantic v2
+        model_config = ConfigDict(extra="allow")
+    else:  # pragma: no cover - pydantic<2
+        class Config:
+            extra = "allow"
 
 
 origins_env = os.getenv("ALLOW_ORIGINS")
@@ -89,7 +97,11 @@ async def get_config():
 @app.post("/config/")
 async def update_config(config: ConfigUpdate):
     """Update the configuration on disk."""
-    save_config(config.model_dump())
+    if hasattr(config, "model_dump"):
+        data = config.model_dump()
+    else:
+        data = config.dict()
+    save_config(data)
     return {"status": "ok"}
 
 
