@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "pretest": "[ -d electron/node_modules ] || npm install --prefix electron",
     "test": "npm --prefix electron test",
     "lint": "npm --prefix electron run lint"
   }

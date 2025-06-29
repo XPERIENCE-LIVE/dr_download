@@ -65,7 +65,7 @@ any missing dependencies and launch Electron automatically. The script skips
 variable `DD_RUN_NPM_UPDATE=1` before running the command.
 
 ### Linting
-Check the React source code with ESLint v9. Install the frontend dependencies if you haven't already:
+Check the React source code with ESLint v9. Install the frontend dependencies if you haven't already. The same `npm install` step is required before running the Jest tests:
 ```bash
 npm install --prefix electron
 npm run lint
@@ -77,6 +77,14 @@ dependencies. The tests also require the `pytest-asyncio` plugin:
 pip install pytest-asyncio -r backend/requirements.txt -r backend/requirements-dev.txt
 pytest -q
 ```
+
+### Frontend Tests
+Run the Jest suite for the React frontend. Install the Node dependencies first:
+```bash
+npm install --prefix electron
+npm test
+```
+The top-level `npm test` command automatically executes the tests from the `electron` directory.
 
 
 ## API Reference
