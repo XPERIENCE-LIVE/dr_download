@@ -17,6 +17,8 @@ _MAX_QUEUE_SIZE = 100
 _queue: Queue[tuple[str, str, str, str]] = Queue(maxsize=_MAX_QUEUE_SIZE)
 _progress: dict[str, int] = {}
 _history: dict[str, dict[str, str | int]] = {}
+# Maximum number of history entries to keep on disk
+_MAX_HISTORY_LEN = 1000
 _state_lock = threading.Lock()
 _worker_started = False
 _NUM_WORKERS = 4
@@ -42,6 +44,9 @@ def _load_history() -> None:
 
 
 def _save_history() -> None:
+    # Drop oldest entries exceeding the history limit
+    while len(_history) > _MAX_HISTORY_LEN:
+        _history.pop(next(iter(_history)))
     try:
         with open(HISTORY_FILE, "w") as f:
             json.dump(_history, f, indent=2)

@@ -97,6 +97,8 @@ Retrieve the current progress percentage for a task.
 
 ### `GET /history/`
 List details of all queued and finished downloads.
+Only the most recent 1000 entries are stored in `backend/history.json`.
+Older records are automatically discarded when the file is saved.
 
 ### `GET /config/` and `POST /config/`
 Read or update the contents of `backend/config.json`. Example default configuration:

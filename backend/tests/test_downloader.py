@@ -105,3 +105,28 @@ def test_save_history_ioerror(monkeypatch, caplog, tmp_path):
     with caplog.at_level(logging.ERROR):
         dl._save_history()
         assert "Failed to write history file" in caplog.text
+
+
+def test_save_history_truncates(monkeypatch, tmp_path):
+    import importlib
+
+    dl = importlib.reload(downloader)
+
+    monkeypatch.setattr(dl, "_queue", Queue())
+    monkeypatch.setattr(dl, "_progress", {})
+    # pre-populate history with more entries than the limit
+    history = {
+        f"t{i}": {"id": f"t{i}", "status": "done"}
+        for i in range(dl._MAX_HISTORY_LEN + 5)
+    }
+    monkeypatch.setattr(dl, "_history", history)
+    monkeypatch.setattr(dl, "_worker_started", True)
+    monkeypatch.setattr(dl, "stop_event", threading.Event())
+    monkeypatch.setattr(dl, "_workers", [])
+    monkeypatch.setattr(dl, "HISTORY_FILE", str(tmp_path / "history.json"))
+
+    dl._save_history()
+
+    assert len(dl._history) == dl._MAX_HISTORY_LEN
+    # oldest entries should have been removed
+    assert "t0" not in dl._history
