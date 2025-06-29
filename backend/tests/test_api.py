@@ -70,3 +70,14 @@ async def test_update_config_serialization_error(client):
         data = {"theme": "dark", "default_format": "video"}
         resp = await client.post("/config/", json=data)
         assert resp.status_code == 500
+
+
+@pytest.mark.asyncio
+async def test_shutdown_endpoint(client):
+    with patch("backend.main.shutdown_workers") as sd:
+        resp = await client.post("/shutdown/")
+        assert resp.status_code == 200
+        assert resp.json() == {"status": "stopping"}
+        sd.assert_called_once()
+
+

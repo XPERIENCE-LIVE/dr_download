@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, ConfigDict
 from fastapi.middleware.cors import CORSMiddleware
-from .downloader import enqueue_download, get_progress, get_history
+from .downloader import enqueue_download, get_progress, get_history, shutdown_workers
 from .config import load_config, save_config
 from .utils import setup_logging
 import uvicorn
@@ -78,6 +78,15 @@ async def get_config():
 async def update_config(config: ConfigUpdate):
     save_config(config.model_dump())
     return {"status": "ok"}
+
+
+@app.post("/shutdown/")
+async def shutdown():
+    shutdown_workers()
+    return {"status": "stopping"}
+
+
+app.add_event_handler("shutdown", shutdown_workers)
 
 
 if __name__ == "__main__":
