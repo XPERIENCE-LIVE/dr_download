@@ -1,14 +1,12 @@
-from queue import Queue
+import sys
 import threading
+from pathlib import Path
+from queue import Queue
 
 import pytest
-import sys
-from pathlib import Path
 
-backend_path = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(backend_path))
-
-import backend.downloader as downloader
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import backend.downloader as downloader  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +23,9 @@ def reset_state(monkeypatch):
 
 def test_enqueue_download(tmp_path):
     task_id = downloader.enqueue_download(
-        "http://example.com", "video", str(tmp_path)
+        "http://example.com",
+        "video",
+        str(tmp_path),
     )
     assert task_id in downloader._progress
     assert task_id in downloader._history
@@ -81,5 +81,3 @@ def test_shutdown_workers_sends_sentinel(monkeypatch):
     downloader.shutdown_workers()
     assert puts == [downloader._SENTINEL, downloader._SENTINEL]
     assert downloader._workers == []
-
-

@@ -4,7 +4,7 @@ from pathlib import Path
 backend_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_path))
 
-from backend import config
+from backend import config  # noqa: E402
 
 
 def test_load_config_defaults(tmp_path, monkeypatch):
@@ -27,6 +27,8 @@ def test_load_config_defaults(tmp_path, monkeypatch):
     config.save_config(partial)
     cfg_loaded = config.load_config()
     # Missing keys should be filled with defaults
-    assert cfg_loaded["default_format"] == config.DEFAULT_CONFIG["default_format"]
-    assert cfg_loaded["log_max_bytes"] == config.DEFAULT_CONFIG["log_max_bytes"]
-    assert cfg_loaded["log_backup_count"] == config.DEFAULT_CONFIG["log_backup_count"]
+    # fmt: off
+    assert cfg_loaded["default_format"] == config.DEFAULT_CONFIG["default_format"]  # noqa: E501
+    assert cfg_loaded["log_max_bytes"] == config.DEFAULT_CONFIG["log_max_bytes"]  # noqa: E501
+    assert cfg_loaded["log_backup_count"] == config.DEFAULT_CONFIG["log_backup_count"]  # noqa: E501
+    # fmt: on
