@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
+import logging
 from pydantic import BaseModel, HttpUrl, ValidationError
 try:
     from pydantic import TypeAdapter
@@ -145,7 +146,11 @@ async def update_config(config: ConfigUpdate):
         data = config.model_dump()
     else:
         data = config.dict()
-    save_config(data)
+    try:
+        save_config(data)
+    except Exception:
+        logging.exception("Failed to save configuration")
+        raise HTTPException(status_code=500, detail="Failed to save configuration")
     return {"status": "ok"}
 
 

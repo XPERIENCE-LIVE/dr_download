@@ -70,6 +70,7 @@ async def test_update_config_serialization_error(client):
         data = {"theme": "dark", "default_format": "video"}
         resp = await client.post("/config/", json=data)
         assert resp.status_code == 500
+        assert resp.json() == {"detail": "Failed to save configuration"}
 
 
 @pytest.mark.asyncio
