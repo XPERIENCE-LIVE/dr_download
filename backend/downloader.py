@@ -5,7 +5,7 @@ import logging
 import os
 import threading
 import uuid
-from queue import Empty, Queue
+from queue import Empty, Full, Queue
 
 from .config import DEFAULT_CONFIG, load_config
 
@@ -94,8 +94,6 @@ def enqueue_download(video_url: str, fmt: str, output_dir: str) -> str:
 def _worker() -> None:
     """Process queued downloads until signalled to stop."""
     while True:
-        if stop_event.is_set():
-            break
         task_id = url = fmt = out_dir = None
         status = "error"
         got_item = False
@@ -103,7 +101,13 @@ def _worker() -> None:
             item = _queue.get(timeout=0.1)
             if item is _SENTINEL:
                 _queue.task_done()
-                break
+                if stop_event.is_set():
+                    break
+                else:
+                    continue
+            if stop_event.is_set():
+                _queue.task_done()
+                continue
             task_id, url, fmt, out_dir = item
             got_item = True
             try:
@@ -153,6 +157,8 @@ def _worker() -> None:
                 ydl.download([url])
             status = "done"
         except Empty:
+            if stop_event.is_set():
+                break
             continue
         except yt_dlp.utils.DownloadError as exc:
             logging.error("Download failed for %s: %s", url, exc)
@@ -204,7 +210,11 @@ def shutdown_workers() -> None:
         return
     stop_event.set()
     for _ in _workers:
-        _queue.put(_SENTINEL)
+        try:
+            _queue.put_nowait(_SENTINEL)
+        except Full:
+            # Queue may be full; workers will exit once tasks complete
+            pass
     for t in list(_workers):
         t.join(timeout=5)
         if t.is_alive():

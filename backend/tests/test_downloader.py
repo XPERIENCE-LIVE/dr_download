@@ -69,7 +69,7 @@ def test_shutdown_workers_sends_sentinel(monkeypatch):
     puts = []
 
     class DummyQueue(Queue):
-        def put(self, item):
+        def put_nowait(self, item):
             puts.append(item)
 
     monkeypatch.setattr(downloader, "_queue", DummyQueue())
@@ -130,3 +130,40 @@ def test_save_history_truncates(monkeypatch, tmp_path):
     assert len(dl._history) == dl._MAX_HISTORY_LEN
     # oldest entries should have been removed
     assert "t0" not in dl._history
+
+
+def test_worker_consumes_sentinel_when_stopping(monkeypatch):
+    q = Queue()
+    q.put(downloader._SENTINEL)
+    monkeypatch.setattr(downloader, "_queue", q)
+    downloader.stop_event.set()
+    downloader._worker()
+    assert q.empty()
+
+
+def test_shutdown_with_full_queue(monkeypatch, tmp_path):
+    q = Queue(maxsize=1)
+    q.put(("tid", "http://example.com", "video", str(tmp_path)))
+
+    class DummyDL:
+        def __init__(self, opts):
+            pass
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            pass
+
+        def download(self, urls):
+            pass
+
+    monkeypatch.setattr(downloader, "_queue", q)
+    monkeypatch.setattr(downloader.yt_dlp, "YoutubeDL", DummyDL)
+    t = threading.Thread(target=downloader._worker)
+    t.start()
+    monkeypatch.setattr(downloader, "_workers", [t])
+    downloader.shutdown_workers()
+    t.join(1)
+    assert not t.is_alive()
+    assert downloader._workers == []
