@@ -1,5 +1,6 @@
 {
   "scripts": {
-    "test": "npm --prefix electron test"
+    "test": "npm --prefix electron test",
+    "lint": "npm --prefix electron run lint"
   }
 }

@@ -6,7 +6,7 @@
     "start": "electron .",
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint src --ext .js,.jsx",
+    "lint": "eslint src --ext .js,.jsx --config eslint.config.js",
     "test": "jest"
   },
   "dependencies": {
@@ -18,7 +18,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.5.2",
     "vite": "^6.3.5",
-    "eslint": "^8",
+    "eslint": "^9",
     "eslint-plugin-react": "^7.33.2",
     "@babel/core": "^7",
     "@babel/preset-env": "^7",
