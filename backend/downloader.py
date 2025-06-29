@@ -37,8 +37,11 @@ def _load_history() -> None:
 
 
 def _save_history() -> None:
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(_history, f, indent=2)
+    try:
+        with open(HISTORY_FILE, "w") as f:
+            json.dump(_history, f, indent=2)
+    except (IOError, OSError) as exc:
+        logging.error("Failed to write history file %s: %s", HISTORY_FILE, exc)
 
 
 _load_history()
