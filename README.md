@@ -73,9 +73,9 @@ npm run lint
 ```
 ### Running Tests
 Install [yt-dlp](https://github.com/yt-dlp/yt-dlp) together with the development
-dependencies. The tests also require the `pytest_asyncio` plugin:
+dependencies. The tests also require the `pytest-asyncio` plugin:
 ```bash
-pip install pytest_asyncio -r backend/requirements.txt -r backend/requirements-dev.txt
+pip install pytest-asyncio -r backend/requirements.txt -r backend/requirements-dev.txt
 pytest -q
 ```
 
