@@ -5,6 +5,11 @@ from .config import load_config
 
 
 def setup_logging():
+    # Initialize basic logging early so warnings during configuration loading
+    # are captured. It will be reconfigured with handlers once the config is
+    # available.
+    logging.basicConfig(level=logging.INFO)
+
     os.makedirs("logs", exist_ok=True)
     cfg = load_config()
     max_bytes = cfg.get("log_max_bytes", 1_000_000)
@@ -21,4 +26,5 @@ def setup_logging():
             ),
             logging.StreamHandler(),
         ],
+        force=True,
     )
