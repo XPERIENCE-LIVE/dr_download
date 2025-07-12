@@ -7,6 +7,7 @@ jest.mock('axios');
 
 describe('DownloadPanel', () => {
   beforeEach(() => {
+    globalThis.importMetaEnv = { VITE_API_BASE_URL: 'http://localhost:8000' };
     axios.post.mockReset();
     axios.get.mockReset();
     window.electronAPI = { selectFolder: jest.fn(() => Promise.resolve('/tmp/out')) };
