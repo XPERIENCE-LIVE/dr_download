@@ -1,6 +1,6 @@
-import js from '@eslint/js';
-import reactPlugin from 'eslint-plugin-react';
-import globals from 'globals';
+const js = require('@eslint/js');
+const reactPlugin = require('eslint-plugin-react');
+const globals = require('globals');
 
 const sanitizedBrowser = Object.fromEntries(
   Object.entries(globals.browser).map(([k, v]) => [k.trim(), v])
@@ -8,8 +8,11 @@ const sanitizedBrowser = Object.fromEntries(
 const sanitizedNode = Object.fromEntries(
   Object.entries(globals.node).map(([k, v]) => [k.trim(), v])
 );
+const sanitizedJest = Object.fromEntries(
+  Object.entries(globals.jest).map(([k, v]) => [k.trim(), v])
+);
 
-export default [
+module.exports = [
   {
     ignores: ['dist/**', 'node_modules/**'],
   },
@@ -39,6 +42,16 @@ export default [
     },
     rules: {
       ...reactPlugin.configs.recommended.rules,
+    },
+  },
+  {
+    files: ['**/__tests__/**/*.{js,jsx}', '**/*.test.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...sanitizedBrowser,
+        ...sanitizedNode,
+        ...sanitizedJest,
+      },
     },
   },
 ];
