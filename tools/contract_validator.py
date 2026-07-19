@@ -256,8 +256,7 @@ def _jest_test_names(text: str) -> set[str]:
             identifier = text[index:end]
             following = _skip_javascript_trivia(text, end)
             is_global = previous is None or not (
-                previous[0] == "identifier"
-                or (previous[0] == "punctuation" and previous[1] in {".", "?."})
+                previous[0] == "punctuation" and previous[1] in {".", "?."}
             )
             if (
                 identifier in {"test", "it"}

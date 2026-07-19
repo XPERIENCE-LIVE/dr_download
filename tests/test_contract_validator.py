@@ -429,6 +429,22 @@ def test_jest_call_inside_regex_literal_is_not_executable(tmp_path: Path):
     assert "US-010: prueba Jest declarada inexistente renders inspected media" not in errors
 
 
+def test_global_jest_call_after_return_is_executable_when_register_runs(tmp_path: Path):
+    story = COMPLETE_STORY.replace("`test_inspect_api`", "`registered global behavior`")
+    root = make_repository(tmp_path, story=story)
+    (root / "electron/src/__tests__/inspection.test.js").write_text(
+        "function register() {\n"
+        "  return test('registered global behavior', () => true);\n"
+        "}\n"
+        "register();\n",
+        encoding="utf-8",
+    )
+
+    errors = validate_repository(root)
+
+    assert "US-010: prueba Jest declarada inexistente registered global behavior" not in errors
+
+
 def test_story_missing_from_matrix_is_rejected(tmp_path: Path):
     root = make_repository(tmp_path)
     (root / "docs/qa/traceability-matrix.md").write_text(
