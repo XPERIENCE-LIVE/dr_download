@@ -1,136 +1,89 @@
-# Dr. Download 2.0
+# Dr. Download
 
-Dr. Download 2.0 is a desktop application developed by **PROGRESSIA** for downloading audio or video content using [yt-dlp](https://github.com/yt-dlp/yt-dlp).  It consists of a FastAPI backend and an Electron+React frontend, providing a simple GUI and an HTTP API for programmatic access.
+Aplicación privada para Windows que inspecciona, organiza y descarga contenido multimedia mediante yt-dlp. La interfaz Electron/React administra un backend FastAPI local; los datos, preferencias e historial permanecen en el equipo.
 
-## Features
-- Queue multiple downloads and monitor their progress.
-- Choose between video or audio (MP3) output.
-- Simple configuration stored in `backend/config.json`.
-- Cross‑platform desktop UI built with Electron.
+## Funciones
 
-## Requirements
-- Python 3.10 or newer
-- Node.js 18 or newer
-- `ffmpeg` available on your `PATH` for audio conversion
+- Inspección previa con título, autor, duración, miniatura y formatos.
+- Carpeta de destino creada y validada automáticamente antes de encolar.
+- Audio MP3/original y video con la mejor calidad disponible.
+- Cola, progreso automático, velocidad, ETA, cancelar y reintentar.
+- Historial SQLite, apertura del archivo o carpeta y notificaciones nativas.
+- Español e inglés; cookies de Edge, Firefox o modo sin cookies.
+- Motor externo yt-dlp actualizable con verificación SHA-256 y rollback atómico.
+- Renderer aislado: IPC enumerado, token de sesión, sandbox y CSP.
 
-## Getting Started
+Descarga únicamente contenido que tengas autorización para guardar. Dr. Download no elude DRM.
 
-### Backend Setup
-1. Install dependencies:
-   ```bash
-   pip install -r backend/requirements.txt
-   ```
-2. (Optional) Compile the sources to check for syntax errors:
-   ```bash
-   python -m py_compile backend/*.py
-   ```
-3. You may set the environment variable `ALLOW_ORIGINS` to a comma‑separated list of hosts allowed for CORS. By default the backend allows `http://localhost:3000` and `http://localhost:5173`.
-4. Start the API server from the repository root using module execution:
-   ```bash
-   python -m backend.main
-   ```
-   The `-m` flag is required because `backend/main.py` relies on package‑relative imports.
+## Desarrollo
 
-### Frontend Setup
-1. Install Node dependencies:
-   ```bash
-   cd electron
-   npm install
-   ```
-2. Build the React frontend:
-   ```bash
-   npm run build
-   ```
-   The generated `index.html` is located at `electron/dist/public/index.html`.
-3. Create an `.env` file inside `electron` to override the API base URL if the backend runs elsewhere. The React code reads this value from `import.meta.env.VITE_API_BASE_URL`:
-   ```
-   VITE_API_BASE_URL=http://your-api-host:8000
-   ```
-   If omitted, the Electron app talks to `http://localhost:8000`.
+Configuración de ingeniería validada: Python 3.13, Node.js 22 y Windows 10/11 x64. FFmpeg, FFprobe y Node se usan desde los recursos versionados del proyecto; no se cambia silenciosamente al software instalado en el equipo.
 
-### Running the Desktop App
-From the `electron` directory run:
-```bash
-npm start
-```
-Running the app as `root` will fail with a sandbox error. Either invoke the command as a regular user or append `--no-sandbox` when running as `root`:
-```bash
-npm start -- --no-sandbox
-```
-When the UI appears, use **Choose...** to pick an output directory. The path field is empty by default.
-
-On Windows you may double‑click `run_progressia_downloader.cmd` to install
-any missing dependencies and launch Electron automatically. The script skips
-`npm update` by default but you can enable it by setting the environment
-variable `DD_RUN_NPM_UPDATE=1` before running the command.
-
-### Linting
-Check the React source code with ESLint v9. Install the frontend dependencies if you haven't already. The same `npm install` step is required before running the Jest tests:
-```bash
+```powershell
+python -m pip install -r backend/requirements.txt -r backend/requirements-dev.txt
 npm install --prefix electron
-npm run lint
-```
-### Running Tests
-Install [yt-dlp](https://github.com/yt-dlp/yt-dlp) together with the development
-dependencies. The tests also require the `pytest-asyncio` plugin:
-```bash
-pip install pytest-asyncio -r backend/requirements.txt -r backend/requirements-dev.txt
-pytest -q
+npm run build --prefix electron
+npm start --prefix electron
 ```
 
-### Frontend Tests
-Run the Jest suite for the React frontend. Install the Node dependencies first:
-```bash
-npm install --prefix electron
-npm test
-```
-The top-level `npm test` command automatically executes the tests from the `electron` directory.
+La primera descarga usa `%USERPROFILE%\\Downloads\\Dr. Download` si no se ha elegido otra carpeta. La aplicación comprueba permisos y espacio antes de encolar y ofrece una recuperación visible si Windows deniega el acceso.
 
+En Windows también puede ejecutarse `electron\run_progressia_downloader.cmd`. Electron inicia el backend en un puerto dinámico y lo detiene al cerrar.
 
-## API Reference
+El empaquetado ejecuta `prepare:runtime`: incluye Node.js para yt-dlp, FFmpeg/FFprobe y el backend PyInstaller. El equipo del usuario no necesita Python ni Node externos. Los logs rotativos viven en `userData/logs`; desde Ajustes se exporta un diagnóstico acotado con URLs, tokens y rutas privadas redactadas.
 
-### `POST /download/`
-Start a new download.
-```json
-{ "url": "https://example.com/video", "format": "video", "output_dir": "/path/to/downloads" }
-```
-Response:
-```json
-{ "status": "queued", "task_id": "<uuid>" }
+## Pruebas
+
+El gate bloqueante de Pull Request ejecuta contratos, pruebas, lint y build con un solo comando:
+
+```powershell
+npm run quality:pr
 ```
 
-### `GET /progress/{task_id}`
-Retrieve the current progress percentage for a task.
+El gate de release es un superconjunto y además exige paquete real, smoke de audio/vídeo, FFprobe, SHA-256 y firma Authenticode válida:
 
-### `GET /history/`
-List details of all queued and finished downloads.
-Only the most recent 1000 entries are stored in `backend/history.json`.
-Older records are automatically discarded when the file is saved.
-
-### `GET /config/` and `POST /config/`
-Read or update the contents of `backend/config.json`. Example default configuration:
-```json
-{
-  "theme": "dark",
-  "default_format": "video",
-  "worker_threads": 4,
-  "log_max_bytes": 1000000,
-  "log_backup_count": 3
-}
+```powershell
+npm run quality:release
 ```
 
-## Logs
-Backend logs are written to `logs/backend.log` in addition to standard output.
-By default the log file is rotated when it reaches **1&nbsp;MB** and up to
-**3** old copies are kept. These limits can be adjusted via the
-`log_max_bytes` and `log_backup_count` settings in `backend/config.json`.
-Check this directory if you encounter issues.
+No existen opciones para omitir pasos. La evidencia se escribe en `artifacts/quality` y solo es válida para el commit y configuración declarados.
 
-## Packaging
-After building the frontend you can package the application with tools such as `electron-packager` or `electron-builder` to create a standalone installer. The Electron app expects the build output in `electron/dist/public/index.html`, so ensure the `npm run build` step is executed before packaging. Packaging steps are not included in this repository.
+```powershell
+python -m pytest -q --basetemp .pytest-local
+npm test --prefix electron -- --runInBand
+npm run lint --prefix electron
+npm run build --prefix electron
+```
 
-## Contributing
-Contributions and bug reports are welcome. Feel free to open an issue or PR.
+Prueba real autorizada (primero inspección, luego descarga opcional):
 
-## License
-This project is licensed under the [MIT License](LICENSE).
+```powershell
+python tools/smoke_test_download.py "https://youtu.be/ID" --cookie-source edge
+python tools/smoke_test_download.py "https://youtu.be/ID" --mode audio --cookie-source edge
+```
+
+## Instalador Windows
+
+```powershell
+python -m pip install -r backend/requirements-build.txt
+npm run package:win --prefix electron
+```
+
+El resultado se crea en `electron/release`. Para una publicación real:
+
+1. Revisar y, cuando corresponda, actualizar los binarios FFmpeg/FFprobe incluidos y sus hashes.
+2. Configurar el certificado de firma admitido por electron-builder.
+3. Definir `DR_DOWNLOAD_UPDATE_OWNER` y `DR_DOWNLOAD_UPDATE_REPO` para el repositorio de GitHub Releases.
+4. Completar los avisos de terceros y probar instalación/actualización en Windows 10 y 11.
+
+## Arquitectura y documentación
+
+- [Producto](docs/product/product-requirements.md)
+- [Sistema visual](docs/design/design-system.md)
+- [Arquitectura](docs/architecture/architecture.md)
+- [Publicación Windows](docs/release/windows-release.md)
+- [Guía de uso](docs/user-guide.md)
+- [Seguridad](SECURITY.md) · [Privacidad](PRIVACY.md) · [Terceros](THIRD_PARTY_NOTICES.md)
+- [ADN de ingeniería](docs/engineering/project-dna.md) · [Estrategia de pruebas](docs/qa/test-strategy.md)
+
+Licencia: [MIT](LICENSE).

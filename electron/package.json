@@ -1,17 +1,25 @@
 {
-  "name": "progressia-downloader",
-  "version": "1.0.0",
+  "name": "dr-download",
+  "productName": "Dr. Download",
+  "version": "2.1.0",
+  "description": "Private Windows media download studio",
+  "author": "PROGRESSIA",
   "main": "electron.js",
   "scripts": {
-    "start": "electron .",
+    "prestart": "npm run build",
+    "start": "node node_modules/electron/cli.js .",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint src --ext .js,.jsx --config eslint.config.cjs",
-    "test": "jest"
+    "test": "jest",
+    "smoke:packaged-ui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-packaged-ui-smoke.ps1",
+    "prepare:runtime": "node scripts/prepare-node-runtime.js",
+    "package:backend": "python -m PyInstaller --clean --noconfirm ../backend/dr-download-backend.spec --distpath resources/backend --workpath ../build/pyinstaller",
+    "package:win": "npm run prepare:runtime && npm run build && npm run package:backend && electron-builder --win nsis --x64",
+    "dist:win": "npm run package:win -- --publish never"
   },
   "dependencies": {
-    "axios": "^1.4.0",
-    "electron": "^28.3.2",
+    "electron-updater": "^6.8.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
@@ -26,11 +34,54 @@
     "babel-jest": "^29.7.0",
     "babel-plugin-transform-import-meta": "^2.3.3",
     "babel-plugin-transform-vite-meta-env": "^1.0.3",
+    "electron": "^43.1.1",
     "eslint": "^9",
     "eslint-plugin-react": "^7.33.2",
+    "electron-builder": "^26.15.3",
     "identity-obj-proxy": "^3",
     "jest": "^29",
     "jest-environment-jsdom": "^29",
     "vite": "^6.3.5"
+  },
+  "build": {
+    "appId": "com.progressia.drdownload",
+    "productName": "Dr. Download",
+    "asar": true,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron.js",
+      "preload.js",
+      "ipc-contract.js",
+      "file-actions.js",
+      "app-updater.js",
+      "runtime-paths.js",
+      "runtime-contract.js",
+      "electron-security.js",
+      "diagnostics.js",
+      "package.json"
+    ],
+    "extraResources": [
+      { "from": "resources/backend", "to": "backend", "filter": ["**/*"] },
+      { "from": "resources/ffmpeg", "to": "ffmpeg", "filter": ["**/*"] },
+      { "from": "resources/node", "to": "node", "filter": ["node.exe", "README.txt"] },
+      { "from": "../THIRD_PARTY_NOTICES.md", "to": "THIRD_PARTY_NOTICES.md" }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.png",
+      "artifactName": "Dr-Download-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Dr. Download"
+    }
   }
 }

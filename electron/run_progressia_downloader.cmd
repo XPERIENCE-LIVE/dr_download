@@ -1,34 +1,13 @@
 @echo off
-setlocal enabledelayedexpansion
+setlocal
 
-REM Convenience launcher for Dr. Download 2.0 on Windows
-REM Installs Node.js dependencies if missing and then starts the app
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_progressia_downloader.ps1" %*
+set "launcher_exit=%ERRORLEVEL%"
 
-cd /d "%~dp0"
-
-echo.
-echo ===============================
-echo  Dr. Download 2.0
-echo  Inicializando entorno...
-echo ===============================
-echo.
-
-REM Verifica si node_modules existe
-if not exist node_modules (
-    echo Dependencias no encontradas. Instalando...
-    call npm install
-
-    if defined DD_RUN_NPM_UPDATE (
-        echo Actualizando dependencias...
-        call npm update
-    )
-    REM Ejecuta "npm audit" manualmente para revisar vulnerabilidades
-REM     call npm audit fix --force
-) else (
-    echo Dependencias encontradas. Continuando...
+if not "%launcher_exit%"=="0" (
+    echo.
+    echo El inicio fallo. Revisa el mensaje anterior.
+    pause
 )
 
-REM Ejecuta la aplicación con Electron
-echo.
-echo Ejecutando Dr. Download 2.0...
-call npx electron .
+exit /b %launcher_exit%

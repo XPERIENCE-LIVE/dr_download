@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
-import logging
+
+import pytest
 
 backend_path = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_path))
@@ -37,17 +38,14 @@ def test_load_config_defaults(tmp_path, monkeypatch):
     # fmt: on
 
 
-def test_load_config_logs_warning_on_malformed(tmp_path, monkeypatch, caplog):
+def test_load_config_fails_closed_on_malformed_file(tmp_path, monkeypatch):
     cfg_file = tmp_path / "config.json"
     monkeypatch.setattr(config, "CONFIG_FILE", str(cfg_file))
     monkeypatch.setattr(config, "LEGACY_CONFIG", str(tmp_path / "legacy.json"))
 
     cfg_file.write_text("{bad json}")
 
-    with caplog.at_level(logging.WARNING):
-        cfg = config.load_config()
+    with pytest.raises(config.ConfigError, match="configuration file is invalid"):
+        config.load_config()
 
-    assert cfg == config.DEFAULT_CONFIG
-    assert any(
-        "Failed to load config file" in rec.message for rec in caplog.records
-    )
+    assert cfg_file.read_text() == "{bad json}"
