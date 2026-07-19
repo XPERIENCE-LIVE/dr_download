@@ -45,7 +45,7 @@
 - **Flujos alternativos:** si la carpeta predeterminada también falla se mantiene el error y se ofrece Elegir otra carpeta.
 - **Given/When/Then:** Given una inspección visible y destino inválido, When se recupera con Descargas, Then el medio inspeccionado permanece y solo cambia la ruta. Given la recuperación falla, When finaliza, Then no se envía `POST /downloads`.
 - **Prueba unitaria:** `validates the destination before queueing`.
-- **Prueba de integración:** contrato IPC `validateDirectory` seguido de `updateConfig` únicamente con resultado aceptado.
+- **Prueba de integración:** contrato IPC validateDirectory seguido de updateConfig únicamente con resultado aceptado.
 - **Prueba E2E:** `MAN-US-003`: desconectar el destino, recuperar y encolar sin reinspeccionar.
 - **Evidencia requerida:** secuencia IPC real y captura antes/después con el mismo título inspeccionado.
 - **Riesgos:** carrera entre cambio de unidad y creación de descarga.
@@ -79,7 +79,7 @@
 - **Flujos alternativos:** URL inválida o excesiva se rechaza; red no disponible muestra causa y reintento; recurso no compatible no habilita la cola.
 - **Given/When/Then:** Given una URL compatible, When se solicita `POST /media/inspect`, Then responde 200 con metadatos normalizados. Given URL inválida, When se inspecciona, Then no se crea descarga y se informa recuperación.
 - **Prueba unitaria:** `test_inspect_media_returns_normalized_metadata`; `buildApiRequest rejects oversized inspection URLs`.
-- **Prueba de integración:** FastAPI `POST /media/inspect` con motor sustituido de forma controlada en `test_premium_api.py`.
+- **Prueba de integración:** `test_inspect_media_returns_normalized_metadata` ejecuta FastAPI con motor controlado.
 - **Prueba E2E:** `MAN-US-010`: desde UI compilada inspeccionar el enlace controlado y comprobar tarjeta de resultado.
 - **Evidencia requerida:** salida de pytest/Jest, captura o reporte E2E, respuesta redactada sin URL completa.
 - **Riesgos:** disponibilidad de red y cambios externos del proveedor.
@@ -111,7 +111,7 @@
 - **Flujos alternativos:** storyboard/MHTML se omiten; formato desconocido se rechaza antes de ejecutar; ausencia de formatos muestra acción sugerida.
 - **Given/When/Then:** Given formatos con storyboard/MHTML, When se normalizan, Then no aparecen. Given un `format_id` desconocido, When se prepara la descarga, Then se rechaza de forma estructurada.
 - **Prueba unitaria:** `test_normalize_info_omits_storyboard_and_mhtml_formats`; `test_build_command_rejects_unknown_format`.
-- **Prueba de integración:** `test_inspect_media_returns_normalized_metadata` más creación con el `format_id` devuelto.
+- **Prueba de integración:** `test_inspect_media_returns_normalized_metadata`; la creación con el format_id devuelto sigue pendiente de evidencia E2E.
 - **Prueba E2E:** `MAN-US-012`: seleccionar audio y vídeo reales y confirmar que la opción enviada existe en la inspección.
 - **Evidencia requerida:** lista de formatos normalizada, llamada IPC y reporte de descarga por formato.
 - **Riesgos:** formatos que cambian entre inspección y ejecución.
@@ -177,7 +177,7 @@
 - **Flujos alternativos:** si `terminate` expira se fuerza `kill`; cancelar ID inexistente devuelve error accionable; cancelar completado no borra archivo.
 - **Given/When/Then:** Given proceso activo, When se cancela, Then termina y no queda huérfano. Given `terminate` bloqueado, When vence el timeout, Then se ejecuta `kill` y `wait`.
 - **Prueba unitaria:** `test_download_cancellation_kills_process_if_terminate_times_out`; `test_shutdown_workers_sends_sentinel`.
-- **Prueba de integración:** endpoint cancelación cubierto por colección/acciones; falta prueba explícita `GAP-US-022-API`.
+- **Prueba de integración:** el endpoint de cancelación carece aún de una prueba API explícita; el gap permanece abierto.
 - **Prueba E2E:** `MAN-US-022`: cancelar una descarga real y comprobar el árbol de procesos.
 - **Evidencia requerida:** árbol de procesos antes/después, estado final y ausencia de archivos temporales huérfanos.
 - **Riesgos:** procesos nietos creados por FFmpeg en Windows.
@@ -209,7 +209,7 @@
 - **Flujos alternativos:** archivo final ausente produce `failed`; extensión inesperada se registra como salida real, no se inventa; FFmpeg fallido conserva diagnóstico.
 - **Given/When/Then:** Given hook de postprocesado con ruta final, When finaliza, Then `filename` coincide con ella. Given archivo inexistente, When termina el proceso, Then no queda `completed`.
 - **Prueba unitaria:** `test_worker_records_postprocessed_filename`; `test_build_command_uses_bundled_ffmpeg`.
-- **Prueba de integración:** smoke backend real con FFmpeg; falta aserción automatizada de `ffprobe` `GAP-US-024-FFPROBE`.
+- **Prueba de integración:** el smoke backend usa FFmpeg, pero la aserción FFprobe permanece pendiente.
 - **Prueba E2E:** `MAN-US-024`: descargar audio y vídeo controlados y validar streams con FFprobe.
 - **Evidencia requerida:** ruta existente, tamaño > 0, salida FFprobe y hash SHA-256.
 - **Riesgos:** antivirus bloqueando renombre o archivo ocupado.
@@ -341,7 +341,7 @@
 - **Flujos alternativos:** puerto ocupado se reemplaza; token incorrecto devuelve 401; backend caído se reinicia o muestra motor no disponible.
 - **Given/When/Then:** Given petición sin token, When llega a API protegida, Then responde 401. Given proceso iniciado, When se inspeccionan sockets, Then solo existe listener loopback.
 - **Prueba unitaria:** `test_session_token_protects_local_api`.
-- **Prueba de integración:** se requiere `GAP-US-042-LISTENER` que inspeccione dirección/puerto del proceso empaquetado.
+- **Prueba de integración:** no existe aún una prueba empaquetada que inspeccione dirección y puerto del listener.
 - **Prueba E2E:** `MAN-US-042`: comprobar que el backend no escucha en interfaces públicas.
 - **Evidencia requerida:** socket local, puerto dinámico y respuestas 401/200 con token incorrecto/correcto.
 - **Riesgos:** configuración accidental de Uvicorn en `0.0.0.0`.
@@ -374,8 +374,8 @@
 - **Flujo principal:** instalar por usuario → iniciar Electron → health check backend/motor → inspeccionar y descargar.
 - **Flujos alternativos:** recurso empaquetado ausente bloquea release con diagnóstico; instalación previa se actualiza conservando datos.
 - **Given/When/Then:** Given Windows sin Python/Node, When instala e inicia, Then backend y motor funcionan. Given recurso requerido ausente, When se ejecuta smoke, Then release falla antes de publicar.
-- **Prueba unitaria:** resolutores de FFmpeg/Node, propagación `DR_DOWNLOAD_NODE` y opciones yt-dlp con ruta explícita.
-- **Prueba de integración:** `npm --prefix electron run package:win` construye NSIS; falta ejecución en VM limpia.
+- **Prueba unitaria:** `test_build_command_uses_bundled_node_runtime`; `uses the packaged Node runtime instead of a machine installation`.
+- **Prueba de integración:** la construcción NSIS existe, pero la ejecución en VM limpia permanece pendiente.
 - **Prueba E2E:** `MAN-US-050`: instalación limpia Windows 10/11, audio y vídeo reales sin runtimes externos.
 - **Evidencia requerida:** inventario previo de software, log de instalación, health check y archivos reproducibles.
 - **Riesgos:** falta ejecutar la matriz final en una VM sin Node/Python instalados.
@@ -407,7 +407,7 @@
 - **Flujos alternativos:** rollback también fallido detiene nuevas descargas pero conserva datos; reintento se limita por intervalo.
 - **Given/When/Then:** Given checksum incorrecto, When se instala, Then actual permanece intacta. Given intento fallido reciente, When se vuelve a comprobar, Then no entra en bucle.
 - **Prueba unitaria:** `test_install_verified_rejects_checksum_and_preserves_current`; `test_failed_update_is_not_retried_again_within_interval`.
-- **Prueba de integración:** health check y reemplazo en `test_engine_updater.py`; falta rollback de aplicación NSIS `GAP-US-052-APP`.
+- **Prueba de integración:** `test_install_verified_rejects_checksum_and_preserves_current`; el roll-forward de aplicación NSIS permanece pendiente.
 - **Prueba E2E:** `MAN-US-052`: actualización deliberadamente rota y arranque de versión anterior.
 - **Evidencia requerida:** hashes antes/después, versión activa, logs y datos de usuario preservados.
 - **Riesgos:** antivirus bloqueando reemplazo atómico.
@@ -422,8 +422,8 @@
 - **Flujo principal:** checkout limpio → pruebas → build backend/UI → NSIS → firma/timestamp → hash → checklist → publicación.
 - **Flujos alternativos:** sin certificado se etiqueta build interna y se prohíbe publicación pública; diferencia no explicada entre builds bloquea release.
 - **Given/When/Then:** Given certificado válido, When se firma, Then `Get-AuthenticodeSignature` devuelve `Valid`. Given certificado ausente, When se construye, Then el artefacto no se declara release pública.
-- **Prueba unitaria:** no aplica a la criptografía del sistema; validar configuración con prueba `GAP-US-053-CONFIG`.
-- **Prueba de integración:** build NSIS aprobado; firma actual `NotSigned`, por tanto criterio no cumplido.
+- **Prueba unitaria:** no aplica a la criptografía del sistema; la validación de configuración de firma permanece pendiente.
+- **Prueba de integración:** el build NSIS está cubierto parcialmente; la firma actual no es válida y el criterio no está cumplido.
 - **Prueba E2E:** `MAN-US-053`: instalar, actualizar y desinstalar el artefacto firmado en VM limpia.
 - **Evidencia requerida:** firma válida, timestamp, SHA-256, SBOM/avisos y checklist firmado.
 - **Riesgos:** certificado Authenticode normalmente tiene coste; contradicción con coste cero debe resolverse mediante certificado donado/patrocinado o distribución abierta no firmada.
@@ -439,7 +439,7 @@
 - **Flujos alternativos:** proceso activo bloquea desinstalación con acción clara; ruta personalizada conserva archivos; configuración se elimina solo mediante una opción explícita.
 - **Given/When/Then:** Given un archivo descargado antes de desinstalar, When se ejecuta el desinstalador, Then el archivo permanece idéntico y los binarios se eliminan. Given una descarga activa, When se solicita desinstalar, Then se detiene de forma segura antes de modificar archivos instalados.
 - **Prueba unitaria:** no aplica al contrato NSIS; la comprobación requiere el instalador exacto.
-- **Prueba de integración:** no existe aún una prueba instalada automatizada; `MAN-US-054` permanece `pending` y bloquea aceptación.
+- **Prueba de integración:** no existe aún una prueba instalada automatizada; el caso manual US-054 permanece pendiente y bloquea aceptación.
 - **Prueba E2E:** `MAN-US-054`: desinstalar el NSIS exacto y comparar el hash del archivo de usuario antes/después.
 - **Evidencia requerida:** hash del instalador, comandos de desinstalación, hash del archivo preservado y ausencia de procesos.
 - **Riesgos:** reglas NSIS demasiado amplias o carpeta de destino dentro del directorio de instalación.
@@ -457,7 +457,7 @@
 - **Flujos alternativos:** escala 150 % conserva contenido; movimiento reducido elimina transiciones no esenciales; foco nunca queda atrapado.
 - **Given/When/Then:** Given navegación solo por teclado, When recorre Nueva descarga, Cola, Historial y Ajustes, Then cada control es alcanzable y muestra foco visible. Given movimiento reducido o escala 150 %, When cambia el estado de una transferencia, Then el contenido permanece legible y funcional.
 - **Prueba unitaria:** las pruebas React actuales verifican flujos, pero no cubren aún auditoría AA, lector de pantalla ni foco completo.
-- **Prueba de integración:** no existe aún automatización de accesibilidad empaquetada; `MAN-US-060` permanece `pending` y bloquea aceptación.
+- **Prueba de integración:** no existe aún automatización de accesibilidad empaquetada; el caso manual US-060 permanece pendiente y bloquea aceptación.
 - **Prueba E2E:** `MAN-US-060`: ejecutar teclado, lector, contraste y escalas 100/125/150 %.
 - **Evidencia requerida:** reporte de accesibilidad, secuencia de foco, escala, SO, ejecutor, fecha y capturas.
 - **Riesgos:** controles personalizados sin nombre accesible o reflow insuficiente.

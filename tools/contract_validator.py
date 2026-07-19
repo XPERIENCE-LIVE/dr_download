@@ -5,8 +5,10 @@ from __future__ import annotations
 import ast
 import json
 import re
+import subprocess
 import sys
 from collections import Counter
+from datetime import date, datetime
 from pathlib import Path
 
 
@@ -89,6 +91,12 @@ IGNORED_PARTS = {
     "resources",
 }
 
+STORY_STATES = {"partial", "blocked", "covered", "accepted"}
+TERMINAL_MANUAL_STATES = {"passed", "failed"}
+EXPLICIT_PENDING_VALUES = {"pending", "blocked"}
+GENERIC_TERMINAL_VALUES = EXPLICIT_PENDING_VALUES | {"unknown", "unassigned", "none", "n/a"}
+VERSION_PATTERN = re.compile(r"\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?")
+
 
 def _read(path: Path, errors: list[str]) -> str:
     try:
@@ -143,6 +151,44 @@ def _cell(header: list[str], row: list[str], name: str) -> str:
         return ""
 
 
+def _strip_javascript_comments(text: str) -> str:
+    output = []
+    index = 0
+    quote = None
+    while index < len(text):
+        char = text[index]
+        following = text[index + 1] if index + 1 < len(text) else ""
+        if quote:
+            output.append(char)
+            if char == "\\" and following:
+                output.append(following)
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char in {"'", '"', "`"}:
+            quote = char
+            output.append(char)
+            index += 1
+            continue
+        if char == "/" and following == "/":
+            index += 2
+            while index < len(text) and text[index] not in "\r\n":
+                index += 1
+            continue
+        if char == "/" and following == "*":
+            index += 2
+            while index + 1 < len(text) and text[index:index + 2] != "*/":
+                index += 1
+            index = min(index + 2, len(text))
+            continue
+        output.append(char)
+        index += 1
+    return "".join(output)
+
+
 def _test_inventory(root: Path) -> tuple[set[str], set[str], set[str]]:
     python_symbols: set[str] = set()
     jest_names: set[str] = set()
@@ -154,16 +200,29 @@ def _test_inventory(root: Path) -> tuple[set[str], set[str], set[str]]:
             tree = ast.parse(path.read_text(encoding="utf-8"))
         except (OSError, SyntaxError, UnicodeDecodeError):
             continue
-        for node in ast.walk(tree):
+        for node in tree.body:
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name.startswith("test_"):
                 python_symbols.add(node.name)
+            elif isinstance(node, ast.ClassDef) and node.name.startswith("Test"):
+                if any(
+                    isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef))
+                    and method.name in {"__init__", "__new__"}
+                    for method in node.body
+                ):
+                    continue
+                for method in node.body:
+                    if (
+                        isinstance(method, (ast.FunctionDef, ast.AsyncFunctionDef))
+                        and method.name.startswith("test_")
+                    ):
+                        python_symbols.add(method.name)
     for pattern in ("*.test.js", "*.test.jsx"):
         for path in root.rglob(pattern):
             if set(path.relative_to(root).parts) & IGNORED_PARTS:
                 continue
             jest_files.add(path.name)
             jest_files.add(path.relative_to(root).as_posix())
-            text = path.read_text(encoding="utf-8")
+            text = _strip_javascript_comments(path.read_text(encoding="utf-8"))
             for match in re.finditer(r"\b(?:test|it)\s*\(\s*(['\"`])(.+?)\1\s*,", text, re.DOTALL):
                 jest_names.add(match.group(2))
     return python_symbols, jest_names, jest_files
@@ -184,15 +243,44 @@ def _declared_test_errors(
         elif re.search(r"\.test\.jsx?$", reference):
             if reference not in jest_files and Path(reference).name not in jest_files:
                 errors.append(f"{story_id}: suite Jest declarada inexistente {reference}")
-        elif (
-            " " in reference
-            and "/" not in reference
-            and "--" not in reference
-            and re.match(r"^[a-z]", reference)
-            and reference not in jest_names
-        ):
-            errors.append(f"{story_id}: prueba Jest declarada inexistente {reference}")
+        elif " " in reference:
+            if reference not in jest_names:
+                errors.append(f"{story_id}: prueba Jest declarada inexistente {reference}")
+        else:
+            errors.append(f"{story_id}: referencia de prueba no clasificable {reference}")
     return errors
+
+
+def _evaluated_commit(root: Path) -> str | None:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "rev-parse", "--show-toplevel", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    lines = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+    if len(lines) != 2 or Path(lines[0]).resolve() != root.resolve():
+        return None
+    return lines[1] if re.fullmatch(r"[0-9a-f]{40}", lines[1]) else None
+
+
+def _valid_iso_date(value: str) -> bool:
+    try:
+        return date.fromisoformat(value).isoformat() == value
+    except ValueError:
+        return False
+
+
+def _valid_iso_datetime(value: str) -> bool:
+    try:
+        datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return "T" in value
 
 
 def _evidence_document(path: Path) -> tuple[dict | None, str | None]:
@@ -227,6 +315,7 @@ def _production_files(root: Path):
 def validate_repository(root: Path) -> list[str]:
     root = Path(root).resolve()
     errors: list[str] = []
+    evaluated_commit = _evaluated_commit(root)
     contracts = {relative: _read(root / relative, errors) for relative in REQUIRED_CONTRACTS}
 
     epics = contracts["docs/product/epics.md"]
@@ -286,13 +375,17 @@ def validate_repository(root: Path) -> list[str]:
 
     acceptance_rows, acceptance_header = _story_matrix(acceptance)
     traceability_rows, traceability_header = _story_matrix(traceability)
-    for label, rows in (
-        ("matriz de aceptación", acceptance_rows),
-        ("matriz de trazabilidad", traceability_rows),
+    for label, rows, header in (
+        ("matriz de aceptación", acceptance_rows, acceptance_header),
+        ("matriz de trazabilidad", traceability_rows, traceability_header),
     ):
         for story_id, instances in sorted(rows.items()):
             if len(instances) > 1:
                 errors.append(f"{story_id}: duplicada en {label}")
+            for row in instances:
+                state = _cell(header, row, "Estado").casefold()
+                if state not in STORY_STATES:
+                    errors.append(f"{story_id}: estado inválido {state or 'vacío'} en {label}")
         for story_id in sorted(actual_ids - set(rows)):
             errors.append(f"{story_id}: falta en {label}")
         for story_id in sorted(set(rows) - actual_ids):
@@ -323,6 +416,10 @@ def validate_repository(root: Path) -> list[str]:
             continue
         evidence = next(iter(evidence_values))
         commit = next(iter(commits))
+        if evaluated_commit is None:
+            errors.append(f"{story_id}: no se pudo determinar el commit del checkout")
+        elif commit != evaluated_commit:
+            errors.append(f"{story_id}: commit declarado {commit} no coincide con checkout {evaluated_commit}")
         document, problem = _evidence_document(root / evidence)
         if problem:
             errors.append(f"{story_id}: estado accepted sin evidencia real {evidence}")
@@ -346,6 +443,8 @@ def validate_repository(root: Path) -> list[str]:
         "cookies",
         "ejecutor",
         "fecha",
+        "commit",
+        "build",
         "estado",
         "evidencia",
     }
@@ -355,6 +454,13 @@ def validate_repository(root: Path) -> list[str]:
     for case_id, count in Counter(manual_case_ids).items():
         if case_id and count > 1:
             errors.append(f"Matriz manual: ID duplicado {case_id}")
+    manual_story_counts = Counter(_cell(manual_header, row, "Historia") for row in manual_rows)
+    for story_id in sorted(actual_ids):
+        if manual_story_counts[story_id] != 1:
+            errors.append(f"{story_id}: no tiene exactamente un caso en matriz manual")
+    for story_id in sorted(set(manual_story_counts) - actual_ids):
+        if story_id:
+            errors.append(f"Matriz manual: {story_id} no corresponde a una historia")
     for row in manual_rows:
         case_id = _cell(manual_header, row, "ID") or "caso sin ID"
         state = _cell(manual_header, row, "Estado").casefold()
@@ -362,8 +468,29 @@ def validate_repository(root: Path) -> list[str]:
             errors.append(f"Matriz manual: {case_id} tiene estado inválido {state or 'vacío'}")
         if any(not cell.strip() for cell in row):
             errors.append(f"Matriz manual: {case_id} contiene campos vacíos")
-        if state in {"passed", "failed"}:
+        if state in TERMINAL_MANUAL_STATES:
+            executor = _cell(manual_header, row, "Ejecutor")
+            execution_date = _cell(manual_header, row, "Fecha")
+            commit = _cell(manual_header, row, "Commit").strip("`")
+            build = _cell(manual_header, row, "Build")
+            os_arch = _cell(manual_header, row, "SO").rsplit(" ", 1)
             evidence = _cell(manual_header, row, "Evidencia").strip("`")
+            if executor.casefold() in GENERIC_TERMINAL_VALUES or len(executor.strip()) < 2:
+                errors.append(f"Matriz manual: {case_id} {state} sin ejecutor real")
+            if not _valid_iso_date(execution_date):
+                errors.append(f"Matriz manual: {case_id} {state} sin fecha ISO-8601")
+            if not re.fullmatch(r"[0-9a-f]{40}", commit):
+                errors.append(f"Matriz manual: {case_id} {state} sin SHA completo")
+            elif evaluated_commit is None:
+                errors.append(f"Matriz manual: {case_id} no pudo determinar el commit del checkout")
+            elif commit != evaluated_commit:
+                errors.append(
+                    f"Matriz manual: {case_id} commit {commit} no coincide con checkout {evaluated_commit}"
+                )
+            if not VERSION_PATTERN.fullmatch(build) or build == "0.0.0":
+                errors.append(f"Matriz manual: {case_id} {state} sin build versionado")
+            if len(os_arch) != 2:
+                errors.append(f"Matriz manual: {case_id} SO no separa arquitectura")
             document, problem = _evidence_document(root / evidence)
             if problem:
                 errors.append(f"Matriz manual: {case_id} {state} sin evidencia real {evidence}")
@@ -372,8 +499,22 @@ def validate_repository(root: Path) -> list[str]:
                 errors.append(f"Matriz manual: {case_id} evidencia declara otro caso")
             if document.get("story_id") != _cell(manual_header, row, "Historia"):
                 errors.append(f"Matriz manual: {case_id} evidencia declara otra historia")
-            if state == "passed" and not _is_approving(document):
+            if document.get("commit") != commit:
+                errors.append(f"Matriz manual: {case_id} evidencia declara otro commit")
+            if document.get("build") != build:
+                errors.append(f"Matriz manual: {case_id} evidencia declara otro build")
+            if len(os_arch) == 2 and document.get("os") != os_arch[0]:
+                errors.append(f"Matriz manual: {case_id} evidencia declara otro SO")
+            if len(os_arch) == 2 and document.get("arch") != os_arch[1]:
+                errors.append(f"Matriz manual: {case_id} evidencia declara otra arquitectura")
+            if document.get("result") != state:
+                errors.append(f"Matriz manual: {case_id} evidencia declara otro resultado")
+            if document.get("approval") != "approved":
                 errors.append(f"Matriz manual: {case_id} evidencia no aprobatoria")
+        elif state in {"pending", "blocked"}:
+            for field in ("Ejecutor", "Fecha", "Commit", "Build", "Evidencia"):
+                if _cell(manual_header, row, field).casefold() not in EXPLICIT_PENDING_VALUES:
+                    errors.append(f"Matriz manual: {case_id} {state} tiene {field} no ejecutado ambiguo")
 
     dna_required = ("fail-closed", "sin fallbacks", "sin placeholders", "sin simulaciones como evidencia")
     folded_dna = dna.casefold()
@@ -402,6 +543,7 @@ def validate_repository(root: Path) -> list[str]:
                     if change_id and count > 1:
                         errors.append(f"ID de cambio duplicado: {change_id}")
                 fingerprints: dict[str, str] = {}
+                evidence_owners: dict[str, str] = {}
                 for item in changes:
                     if not isinstance(item, dict):
                         errors.append("change-ledger.json: cada cambio debe ser un objeto")
@@ -426,6 +568,7 @@ def validate_repository(root: Path) -> list[str]:
                     regression_tests = item.get("regression_tests")
                     evidence_items = item.get("evidence")
                     commit = str(item.get("commit") or "")
+                    build = str(item.get("build") or "")
                     if not isinstance(regression_tests, list) or not regression_tests:
                         errors.append(f"{change_id}: {status} sin prueba de regresión")
                     else:
@@ -441,15 +584,54 @@ def validate_repository(root: Path) -> list[str]:
                         continue
                     if not re.fullmatch(r"[0-9a-f]{40}", commit):
                         errors.append(f"{change_id}: {status} sin SHA completo")
+                    elif evaluated_commit is None:
+                        errors.append(f"{change_id}: no se pudo determinar el commit del checkout")
+                    elif commit != evaluated_commit:
+                        errors.append(
+                            f"{change_id}: commit declarado {commit} no coincide con checkout {evaluated_commit}"
+                        )
+                    if not VERSION_PATTERN.fullmatch(build):
+                        errors.append(f"{change_id}: {status} sin build versionado")
+                    approved_executions: set[str] = set()
                     for evidence in evidence_items:
-                        document, problem = _evidence_document(root / str(evidence))
+                        evidence = str(evidence)
+                        owner = evidence_owners.setdefault(evidence, change_id)
+                        if owner != change_id:
+                            errors.append(f"{change_id}: evidencia reutilizada por {owner} en {evidence}")
+                        document, problem = _evidence_document(root / evidence)
                         if problem:
                             errors.append(f"{change_id}: evidencia inexistente {evidence}")
                             continue
+                        if document.get("change_id") != change_id:
+                            errors.append(
+                                f"{change_id}: evidencia declara el cambio "
+                                f"{document.get('change_id') or 'ausente'} en {evidence}"
+                            )
                         if document.get("commit") != commit:
                             errors.append(f"{change_id}: evidencia de otro SHA {evidence}")
+                        if document.get("build") != build:
+                            errors.append(f"{change_id}: evidencia de otro build {evidence}")
+                        if not _valid_iso_datetime(str(document.get("generated_at") or "")):
+                            errors.append(f"{change_id}: evidencia sin generated_at ISO-8601 {evidence}")
                         if not _is_approving(document):
                             errors.append(f"{change_id}: evidencia no aprobatoria {evidence}")
+                        executions = document.get("regression_tests")
+                        if isinstance(executions, list):
+                            for execution in executions:
+                                if (
+                                    isinstance(execution, dict)
+                                    and execution.get("result") == "passed"
+                                    and execution.get("approval") == "approved"
+                                    and isinstance(execution.get("name"), str)
+                                ):
+                                    approved_executions.add(execution["name"])
+                    if isinstance(regression_tests, list) and evidence_items:
+                        evidence_label = str(evidence_items[0])
+                        for reference in regression_tests:
+                            if reference not in approved_executions:
+                                errors.append(
+                                    f"{change_id}: evidencia no acredita {reference} en {evidence_label}"
+                                )
 
     return errors
 
