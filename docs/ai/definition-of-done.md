@@ -1,6 +1,8 @@
 # Definition of Done
 
-Una historia está `done` solo cuando todos los ítems aplicables están marcados y revisados. `accepted` exige además aprobación de release y evidencia real según `docs/engineering/project-dna.md`.
+Una historia está `done` solo cuando todos sus ítems aplicables están marcados y revisados. Cambia a `accepted` cuando la evidencia real de su propio nivel satisface sus criterios según `docs/engineering/project-dna.md`; no depende de una aprobación de release.
+
+## Checklist de historia
 
 | Check | Responsable | Evidencia obligatoria | Condición bloqueante |
 | --- | --- | --- | --- |
@@ -13,9 +15,19 @@ Una historia está `done` solo cuando todos los ítems aplicables están marcado
 | Gate contractual y gate PR pasan el mismo commit | `reviewer` | Evidencia machine-readable con commit y exit code 0 | Un gate falla, falta o usa otro SHA |
 | Branch protection y aprobación humana permiten integrar | `reviewer` | Estado de checks y aprobación de la PR | Push directo, check omitido o aprobación ausente |
 | La evidencia de aceptación usa procesos y datos reales del nivel declarado | `reviewer` | Archivo de evidencia con versión, matriz y hashes | Evidencia parcial, antigua, simulada o de otro artefacto |
+
+Un check de historia bloqueado mantiene esa historia fuera de `accepted`; no existe cierre condicional ni excepción implícita.
+
+## Checklist de release
+
+La release solo se evalúa después de que las historias del alcance estén `accepted` o exista una reducción de scope aprobada. La aprobación de release no crea ni sustituye aceptación de historias.
+
+| Check | Responsable | Evidencia obligatoria | Condición bloqueante |
+| --- | --- | --- | --- |
 | Las 25 historias están aceptadas o existe reducción de scope aprobada | `release approver` | Matriz de aceptación o decisión de producto | Queda una historia requerida sin aceptación |
-| El mismo instalador supera release gate, SignPath y post-firma | `release approver` | `release-artifact.json`, artifact-id, hashes y Authenticode `Valid` | Recompilación, publisher distinto o hash discordante |
+| El gate unsigned prueba el instalador exacto y registra `publishable: false` | `reviewer` | artifact-id, SHA-256 unsigned y resultados del gate | Se exige firma antes de SignPath, se prueba otro artefacto o falla un caso |
+| SignPath devuelve el artefacto y el gate post-SignPath valida la firma | `release approver` | Solicitud, SHA-256 signed, timestamp, publisher y Authenticode `Valid` | Recompilación, firma ausente, publisher distinto o hash discordante |
 | SBOM/licencias y Windows 10/11 están aprobados | `release approver` | SBOM, avisos y matriz manual firmada | Falta componente, licencia o caso requerido |
 | La publicación se limita al hash firmado aprobado | `release approver` | Aprobación final y SHA-256 del asset | Asset distinto, tag mutable o automatización sin aprobación |
 
-Un check bloqueado mantiene la historia o release fuera de `accepted`; no existe cierre condicional ni excepción implícita.
+Un check de release bloqueado impide publicar, pero no altera retroactivamente la aceptación sustentada de una historia.

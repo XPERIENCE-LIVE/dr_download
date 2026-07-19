@@ -22,6 +22,7 @@
 - Un doble controlado puede aislar una unidad, pero su resultado solo demuestra esa unidad y debe complementarse con evidencia real del nivel de aceptación.
 - Obedecer todos los `QA-GATE-*` de `docs/engineering/project-dna.md`; una IA no puede omitirlos, reinterpretarlos como recomendación ni marcar un hallazgo abierto como resuelto sin evidencia fresca.
 - Mantener una sola identidad de artefacto desde build hasta publicación; toda recompilación reinicia pruebas, firma y aprobación.
+- Separar el gate unsigned previo a SignPath del gate post-SignPath: el primero siempre registra `publishable: false` y nunca exige Authenticode; el segundo empieza al recibir el artefacto firmado y valida Authenticode `Valid`.
 - Asociar la evidencia de cada etapa al commit, artifact-id y SHA-256 exactos; no mezclar resultados de runs, configuraciones o artefactos diferentes.
 - No integrar en `main` fuera de Pull Request ni eludir branch protection, CODEOWNERS, checks o aprobación humana.
 - No sustituir SignPath Foundation por un certificado CSC local en una release pública.

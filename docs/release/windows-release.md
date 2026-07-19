@@ -1,6 +1,10 @@
 # Publicación Windows
 
-## Build interno
+## Estado de implementación
+
+Los comandos y rutas de esta guía son **contratos objetivo**, no evidencia de capacidades incluidas en este commit documental. En particular, `backend/requirements-build.txt`, `tools/quality-gate.ps1`, `tools/validate-release.ps1`, los scripts `quality:*` y los workflows nombrados deben ser versionados y verificados por las tareas de implementación correspondientes. Hasta entonces, un checkout limpio no puede ejecutar reproduciblemente esta guía y la release permanece bloqueada; ningún PASS observado solo en un workspace se atribuye a este commit.
+
+## Contrato objetivo de build interno
 
 ```powershell
 python -m pip install -r backend/requirements-build.txt
@@ -12,8 +16,8 @@ El pipeline compila React, empaqueta FastAPI con PyInstaller y crea un NSIS x64 
 
 ## Puertas de publicación
 
-- `QA-GATE-ARTIFACT-001`: GitHub Actions construye un único NSIS x64 y registra artifact-id, commit y SHA-256 unsigned. `tools/quality-gate.ps1 -Level release` debe finalizar con código 0 sobre ese artefacto y commit.
-- `QA-GATE-SIGN-001`: el mismo artifact-id se envía a SignPath con aprobación humana; el resultado debe mostrar Authenticode `Valid`, timestamp válido y publisher `SignPath Foundation`.
+- `QA-GATE-RELEASE-UNSIGNED-001`: GitHub Actions construye un único NSIS x64 y registra artifact-id, commit y SHA-256 unsigned. El contrato objetivo `tools/quality-gate.ps1 -Level release` debe probar ese artefacto, finalizar con código 0 y registrar `publishable: false`.
+- `QA-GATE-SIGN-001`: el mismo artifact-id se envía a SignPath con aprobación humana. Solo después de recibir el artefacto firmado, el gate post-SignPath objetivo valida SHA-256 signed, Authenticode `Valid`, timestamp válido y publisher `SignPath Foundation`.
 - FFmpeg/FFprobe x64 incluidos, sus hashes archivados y licencias reflejadas en `THIRD_PARTY_NOTICES.md`.
 - Repositorio de GitHub Releases configurado mediante `DR_DOWNLOAD_UPDATE_OWNER` y `DR_DOWNLOAD_UPDATE_REPO`.
 - Instalación, actualización, roll-forward y desinstalación del NSIS exacto probadas en Windows 10/11 limpios.
@@ -29,8 +33,9 @@ El workflow `quality-release` solo construye y conserva un artefacto verificable
 | Etapa | Responsable | Evidencia | Bloqueo |
 | --- | --- | --- | --- |
 | Build único | `author` | commit, tag, run, artifact-id y SHA-256 unsigned | Identidad ausente o más de un build candidato |
-| Pruebas del NSIS | `reviewer` | instalación, inicio, streams, procesos, datos y desinstalación | Se prueba `win-unpacked`, otro archivo o falta un resultado |
-| Firma SignPath | `release approver` | solicitud, aprobación, publisher, timestamp y SHA-256 signed | Firma no `Valid`, configuración ausente o publisher distinto |
+| Gate unsigned previo a firma | `reviewer` | instalación, inicio, streams, procesos, datos, desinstalación, SHA-256 unsigned y `publishable: false` | Se prueba `win-unpacked`, otro archivo, falta un resultado o se intenta verificar firma |
+| Firma SignPath | `release approver` | solicitud, aprobación y artifact-id | SignPath no devuelve el artefacto firmado o cambia su origen |
+| Gate post-SignPath | `reviewer` | SHA-256 signed, instalación, inicio, desinstalación, publisher, timestamp y Authenticode `Valid` | Firma no `Valid`, configuración ausente, publisher distinto o prueba incompleta |
 | Publicación | `release approver` | aprobación final, tag y hash del asset | Hash distinto, evidencia incompleta o gate abierto |
 
 Cada etapa consume la identidad emitida por la anterior. Una discrepancia invalida el candidato completo.
@@ -40,6 +45,7 @@ Cada etapa consume la identidad emitida por la anterior. Una discrepancia invali
 La aplicación no se reinicia con descargas activas. Si una actualización falla, el reemplazo no se promueve y permanece la última versión previamente verificada. Si no existe una versión verificada de yt-dlp, la descarga queda bloqueada con error accionable.
 
 Un defecto de aplicación ya publicado activa `QA-GATE-ROLLFORWARD-001` y `docs/operations/rollback-runbook.md`: se congela el canal, se parte del último tag bueno, se crea un parche superior y se repite el pipeline completo con un artefacto nuevo y firmado antes de reabrir el canal.
-# Gate específico de carpetas
+
+## Gate específico de carpetas
 
 Antes de publicar, probar una carpeta nueva, una ruta relativa, un archivo usado como carpeta, una carpeta sin permisos y un volumen con poco espacio. La UI debe mostrar `error_code`, causa y recuperación; nunca publicar el error técnico sin traducir.

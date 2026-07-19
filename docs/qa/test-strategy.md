@@ -11,8 +11,11 @@ Las pruebas unitarias pueden aislar una frontera con un doble controlado, pero n
 
 ## Gates automáticos
 
+Los siguientes nombres y rutas son **contratos objetivo**. Este commit documental no versiona sus implementaciones; hasta que las tareas correspondientes añadan y prueben los scripts y workflows, no existe ejecución reproducible desde un checkout limpio ni PASS atribuible a este commit.
+
 - `npm run quality:pr`: contrato SDD, registro anti-duplicación, pytest, Jest, lint y build.
-- `npm run quality:release`: todo el gate PR, PyInstaller/NSIS, aplicación empaquetada, descarga real de audio y vídeo, FFprobe, SHA-256 y Authenticode.
+- `npm run quality:release`: gate unsigned previo a SignPath; ejecuta todo el gate PR, PyInstaller/NSIS, aplicación empaquetada, descarga real de audio y vídeo, FFprobe y SHA-256 unsigned, y registra `publishable: false`.
+- `npm run quality:post-sign`: gate posterior a recibir el artefacto firmado de SignPath; valida SHA-256 signed, Authenticode `Valid`, timestamp, publisher `SignPath Foundation`, instalación, inicio y desinstalación del instalador exacto.
 - `.github/workflows/nightly-real.yml`: ejecuta el smoke externo programado sin sustituir el gate PR determinista.
 
 No existen switches de omisión. Cada ejecución escribe evidencia JSON en `artifacts/quality`; un archivo de evidencia de otro commit o configuración no es reutilizable.
@@ -21,7 +24,8 @@ No existen switches de omisión. Cada ejecución escribe evidencia JSON en `arti
 
 - `QA-GATE-PR-001`: las pruebas, lint, build y validador contractual deben aprobar el mismo SHA protegido por Pull Request.
 - `QA-GATE-EVIDENCE-001`: cada evidencia registra versión, commit, sistema, arquitectura, configuración, fecha, comando, código de salida, artifact-id y hashes aplicables.
-- `QA-GATE-ARTIFACT-001`: el gate release recibe una ruta e identidad explícitas; no selecciona “el más reciente” y no recompila entre prueba, firma y publicación.
+- `QA-GATE-ARTIFACT-001`: los gates unsigned y post-SignPath reciben una ruta e identidad explícitas; no seleccionan “el más reciente” y no recompilan entre prueba, firma y publicación.
+- `QA-GATE-RELEASE-UNSIGNED-001`: el gate previo a firma termina con el hash unsigned y `publishable: false`; la validación de Authenticode pertenece exclusivamente al gate post-SignPath.
 - Unitarias e integración pueden aislar fronteras, pero solo E2E/acceptance/release con procesos reales acreditan su nivel.
 - El release prueba el NSIS exacto: instalación, inicio, SQLite, IPC, yt-dlp, FFmpeg/FFprobe, duración y tipo de streams, procesos, preservación de datos y desinstalación.
 - Windows 10/11 y cada combinación manual declaran ejecutor, fecha, configuración, estado y ruta de evidencia.
