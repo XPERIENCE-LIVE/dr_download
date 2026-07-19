@@ -387,6 +387,48 @@ def test_jest_call_inside_string_literal_is_not_executable(tmp_path: Path, javas
     assert "US-010: prueba Jest declarada inexistente fake string behavior" in errors
 
 
+@pytest.mark.parametrize(
+    "member_call",
+    [
+        "helper.test('member fake behavior', () => true);",
+        "helper?.test('member fake behavior', () => true);",
+    ],
+)
+def test_member_jest_call_is_not_a_global_test(tmp_path: Path, member_call: str):
+    story = COMPLETE_STORY.replace(
+        "`test_inspect_api`",
+        "`member fake behavior`; `renders inspected media`",
+    )
+    root = make_repository(tmp_path, story=story)
+    (root / "electron/src/__tests__/inspection.test.js").write_text(
+        member_call + "\ntest('renders inspected media', () => expect(true).toBe(true));\n",
+        encoding="utf-8",
+    )
+
+    errors = validate_repository(root)
+
+    assert "US-010: prueba Jest declarada inexistente member fake behavior" in errors
+    assert "US-010: prueba Jest declarada inexistente renders inspected media" not in errors
+
+
+def test_jest_call_inside_regex_literal_is_not_executable(tmp_path: Path):
+    story = COMPLETE_STORY.replace(
+        "`test_inspect_api`",
+        "`regex fake behavior`; `renders inspected media`",
+    )
+    root = make_repository(tmp_path, story=story)
+    (root / "electron/src/__tests__/inspection.test.js").write_text(
+        "const pattern = /test('regex fake behavior', [()\\\\/]+)/;\n"
+        "test('renders inspected media', () => expect(true).toBe(true));\n",
+        encoding="utf-8",
+    )
+
+    errors = validate_repository(root)
+
+    assert "US-010: prueba Jest declarada inexistente regex fake behavior" in errors
+    assert "US-010: prueba Jest declarada inexistente renders inspected media" not in errors
+
+
 def test_story_missing_from_matrix_is_rejected(tmp_path: Path):
     root = make_repository(tmp_path)
     (root / "docs/qa/traceability-matrix.md").write_text(

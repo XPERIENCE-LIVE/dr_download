@@ -191,9 +191,44 @@ def _skip_javascript_trivia(text: str, start: int) -> int:
     return index
 
 
+def _read_javascript_regex(text: str, start: int) -> int:
+    index = start + 1
+    in_character_class = False
+    while index < len(text):
+        char = text[index]
+        if char == "\\" and index + 1 < len(text):
+            index += 2
+            continue
+        if char in "\r\n":
+            return start + 1
+        if char == "[" and not in_character_class:
+            in_character_class = True
+        elif char == "]" and in_character_class:
+            in_character_class = False
+        elif char == "/" and not in_character_class:
+            index += 1
+            while index < len(text) and text[index].isalpha():
+                index += 1
+            return index
+        index += 1
+    return len(text)
+
+
+def _can_start_javascript_regex(previous: tuple[str, str] | None) -> bool:
+    if previous is None:
+        return True
+    kind, value = previous
+    if kind == "identifier":
+        return value in {"return", "throw", "case", "yield", "await", "typeof", "void", "delete"}
+    if kind == "literal":
+        return False
+    return value not in {")", "]", "}"}
+
+
 def _jest_test_names(text: str) -> set[str]:
     names: set[str] = set()
     index = 0
+    previous: tuple[str, str] | None = None
     while index < len(text):
         index = _skip_javascript_trivia(text, index)
         if index >= len(text):
@@ -201,6 +236,18 @@ def _jest_test_names(text: str) -> set[str]:
         char = text[index]
         if char in {"'", '"', "`"}:
             _, index = _read_javascript_string(text, index)
+            previous = ("literal", "string")
+            continue
+        if char == "/" and _can_start_javascript_regex(previous):
+            index = _read_javascript_regex(text, index)
+            previous = ("literal", "regex")
+            continue
+        if char.isdigit():
+            end = index + 1
+            while end < len(text) and (text[end].isalnum() or text[end] in {".", "_"}):
+                end += 1
+            previous = ("literal", "number")
+            index = end
             continue
         if char.isalpha() or char in {"_", "$"}:
             end = index + 1
@@ -208,16 +255,32 @@ def _jest_test_names(text: str) -> set[str]:
                 end += 1
             identifier = text[index:end]
             following = _skip_javascript_trivia(text, end)
-            if identifier in {"test", "it"} and following < len(text) and text[following] == "(":
+            is_global = previous is None or not (
+                previous[0] == "identifier"
+                or (previous[0] == "punctuation" and previous[1] in {".", "?."})
+            )
+            if (
+                identifier in {"test", "it"}
+                and is_global
+                and following < len(text)
+                and text[following] == "("
+            ):
                 argument = _skip_javascript_trivia(text, following + 1)
                 if argument < len(text) and text[argument] in {"'", '"', "`"}:
                     name, argument_end = _read_javascript_string(text, argument)
                     if name is not None:
                         names.add(name)
                     index = argument_end
+                    previous = ("literal", "string")
                     continue
+            previous = ("identifier", identifier)
             index = end
             continue
+        if text.startswith("?.", index):
+            previous = ("punctuation", "?.")
+            index += 2
+            continue
+        previous = ("punctuation", char)
         index += 1
     return names
 
