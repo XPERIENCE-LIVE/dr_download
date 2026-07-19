@@ -2,6 +2,8 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from tools.contract_validator import validate_repository
 
 
@@ -333,7 +335,8 @@ def test_commented_jest_declaration_is_not_executable(tmp_path: Path):
     story = COMPLETE_STORY.replace("`test_inspect_api`", "`commented renderer behavior`")
     root = make_repository(tmp_path, story=story)
     (root / "electron/src/__tests__/inspection.test.js").write_text(
-        "// test('commented renderer behavior', () => expect(true).toBe(true));\n",
+        "// test('commented renderer behavior', () => expect(true).toBe(true));\n"
+        "/* it('commented renderer behavior', () => expect(true).toBe(true)); */\n",
         encoding="utf-8",
     )
 
@@ -349,6 +352,39 @@ def test_unclassified_test_reference_is_rejected(tmp_path: Path):
     errors = validate_repository(root)
 
     assert "US-010: referencia de prueba no clasificable mystery_reference" in errors
+
+
+def test_unquoted_python_test_reference_is_detected_and_rejected(tmp_path: Path):
+    story = COMPLETE_STORY.replace("`test_inspect_api`", "test_missing_unquoted")
+    root = make_repository(tmp_path, story=story)
+
+    errors = validate_repository(root)
+
+    assert "US-010: referencia Python sin delimitar test_missing_unquoted" in errors
+    assert "US-010: prueba declarada inexistente test_missing_unquoted" in errors
+
+
+@pytest.mark.parametrize(
+    "javascript",
+    [
+        'const source = "test(\'fake string behavior\', () => true)";',
+        "const source = 'it(\"fake string behavior\", () => true)';",
+        "const source = `test('fake string behavior', () => true)`;",
+        r'''const source = "escaped \" test('fake string behavior', () => true)";''',
+        r"const source = `escaped \` test('fake string behavior', () => true)`;",
+    ],
+)
+def test_jest_call_inside_string_literal_is_not_executable(tmp_path: Path, javascript: str):
+    story = COMPLETE_STORY.replace("`test_inspect_api`", "`fake string behavior`")
+    root = make_repository(tmp_path, story=story)
+    (root / "electron/src/__tests__/inspection.test.js").write_text(
+        javascript + "\ntest('renders inspected media', () => expect(true).toBe(true));\n",
+        encoding="utf-8",
+    )
+
+    errors = validate_repository(root)
+
+    assert "US-010: prueba Jest declarada inexistente fake string behavior" in errors
 
 
 def test_story_missing_from_matrix_is_rejected(tmp_path: Path):

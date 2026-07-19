@@ -1,5 +1,9 @@
 # Historias de usuario
 
+## Gramática normativa de referencias de prueba
+
+En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia ejecutable debe estar delimitada por backticks y pertenecer a una sola categoría: símbolo Python `test_*`, nombre exacto de una declaración Jest `test(...)`/`it(...)`, o archivo de suite `*.test.js`/`*.test.jsx`. Un gap se describe en prosa sin darle apariencia de símbolo. El validador rechaza referencias `test_*` sin delimitar, símbolos inexistentes y tokens que no encajan inequívocamente en esta gramática.
+
 ## E1 — Destino confiable
 
 ### US-001 — Carpeta inicial válida

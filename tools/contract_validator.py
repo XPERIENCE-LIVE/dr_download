@@ -151,42 +151,75 @@ def _cell(header: list[str], row: list[str], name: str) -> str:
         return ""
 
 
-def _strip_javascript_comments(text: str) -> str:
-    output = []
-    index = 0
-    quote = None
+def _read_javascript_string(text: str, start: int) -> tuple[str | None, int]:
+    quote = text[start]
+    index = start + 1
+    value = []
+    dynamic_template = False
+    escapes = {"n": "\n", "r": "\r", "t": "\t"}
     while index < len(text):
         char = text[index]
-        following = text[index + 1] if index + 1 < len(text) else ""
-        if quote:
-            output.append(char)
-            if char == "\\" and following:
-                output.append(following)
-                index += 2
-                continue
-            if char == quote:
-                quote = None
-            index += 1
-            continue
-        if char in {"'", '"', "`"}:
-            quote = char
-            output.append(char)
-            index += 1
-            continue
-        if char == "/" and following == "/":
+        if char == "\\" and index + 1 < len(text):
+            following = text[index + 1]
+            value.append(escapes.get(following, following))
             index += 2
-            while index < len(text) and text[index] not in "\r\n":
-                index += 1
             continue
-        if char == "/" and following == "*":
-            index += 2
-            while index + 1 < len(text) and text[index:index + 2] != "*/":
-                index += 1
-            index = min(index + 2, len(text))
-            continue
-        output.append(char)
+        if quote == "`" and char == "$" and index + 1 < len(text) and text[index + 1] == "{":
+            dynamic_template = True
+        if char == quote:
+            return (None if dynamic_template else "".join(value), index + 1)
+        value.append(char)
         index += 1
-    return "".join(output)
+    return None, len(text)
+
+
+def _skip_javascript_trivia(text: str, start: int) -> int:
+    index = start
+    while index < len(text):
+        if text[index].isspace():
+            index += 1
+            continue
+        if text.startswith("//", index):
+            newline = text.find("\n", index + 2)
+            index = len(text) if newline < 0 else newline + 1
+            continue
+        if text.startswith("/*", index):
+            end = text.find("*/", index + 2)
+            index = len(text) if end < 0 else end + 2
+            continue
+        break
+    return index
+
+
+def _jest_test_names(text: str) -> set[str]:
+    names: set[str] = set()
+    index = 0
+    while index < len(text):
+        index = _skip_javascript_trivia(text, index)
+        if index >= len(text):
+            break
+        char = text[index]
+        if char in {"'", '"', "`"}:
+            _, index = _read_javascript_string(text, index)
+            continue
+        if char.isalpha() or char in {"_", "$"}:
+            end = index + 1
+            while end < len(text) and (text[end].isalnum() or text[end] in {"_", "$"}):
+                end += 1
+            identifier = text[index:end]
+            following = _skip_javascript_trivia(text, end)
+            if identifier in {"test", "it"} and following < len(text) and text[following] == "(":
+                argument = _skip_javascript_trivia(text, following + 1)
+                if argument < len(text) and text[argument] in {"'", '"', "`"}:
+                    name, argument_end = _read_javascript_string(text, argument)
+                    if name is not None:
+                        names.add(name)
+                    index = argument_end
+                    continue
+            index = end
+            continue
+        index += 1
+    return names
 
 
 def _test_inventory(root: Path) -> tuple[set[str], set[str], set[str]]:
@@ -222,9 +255,7 @@ def _test_inventory(root: Path) -> tuple[set[str], set[str], set[str]]:
                 continue
             jest_files.add(path.name)
             jest_files.add(path.relative_to(root).as_posix())
-            text = _strip_javascript_comments(path.read_text(encoding="utf-8"))
-            for match in re.finditer(r"\b(?:test|it)\s*\(\s*(['\"`])(.+?)\1\s*,", text, re.DOTALL):
-                jest_names.add(match.group(2))
+            jest_names.update(_jest_test_names(path.read_text(encoding="utf-8")))
     return python_symbols, jest_names, jest_files
 
 
@@ -236,6 +267,11 @@ def _declared_test_errors(
     jest_files: set[str],
 ) -> list[str]:
     errors = []
+    undelimited = re.sub(r"`[^`]*`", "", value)
+    for reference in re.findall(r"\btest_[A-Za-z0-9_]+\b", undelimited):
+        errors.append(f"{story_id}: referencia Python sin delimitar {reference}")
+        if reference not in python_symbols:
+            errors.append(f"{story_id}: prueba declarada inexistente {reference}")
     for reference in re.findall(r"`([^`]+)`", value):
         if re.fullmatch(r"test_[A-Za-z0-9_]+", reference):
             if reference not in python_symbols:
