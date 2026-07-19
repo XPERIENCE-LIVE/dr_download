@@ -24,7 +24,7 @@ La release solo se evalúa después de que las historias del alcance estén `acc
 
 | Check | Responsable | Evidencia obligatoria | Condición bloqueante |
 | --- | --- | --- | --- |
-| Las 25 historias están aceptadas o existe reducción de scope aprobada | `release approver` | Matriz de aceptación o decisión de producto | Queda una historia requerida sin aceptación |
+| Todas las historias del alcance vigente están aceptadas o existe reducción de scope aprobada | `release approver` | Fichas y ambas matrices coincidentes, o decisión de producto | Queda una historia del universo derivado sin aceptación |
 | El gate unsigned prueba el instalador exacto y registra `publishable: false` | `reviewer` | artifact-id, SHA-256 unsigned y resultados del gate | Se exige firma antes de SignPath, se prueba otro artefacto o falla un caso |
 | SignPath devuelve el artefacto y el gate post-SignPath valida la firma | `release approver` | Solicitud, SHA-256 signed, timestamp, publisher y Authenticode `Valid` | Recompilación, firma ausente, publisher distinto o hash discordante |
 | SBOM/licencias y Windows 10/11 están aprobados | `release approver` | SBOM, avisos y matriz manual firmada | Falta componente, licencia o caso requerido |

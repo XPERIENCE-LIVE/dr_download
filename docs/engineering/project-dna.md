@@ -34,7 +34,7 @@ Este contrato es normativo para personas, IA, CI y releases. Si una regla no pue
 - `QA-GATE-SIGN-001` — Solo después de que SignPath devuelve el artefacto firmado, un gate post-SignPath verifica origen, SHA-256 signed, timestamp y Authenticode `Valid`; **SignPath Foundation** es el publisher visible. La ausencia de cualquiera bloquea la release.
 - `QA-GATE-PUBLISH-001` — Solo puede publicarse el hash firmado que superó la validación post-firma. Tags y releases son inmutables; nunca se reemplaza un binario bajo la misma versión.
 - `QA-GATE-ROLLFORWARD-001` — Un defecto publicado se recupera desde el último tag bueno mediante una versión de parche superior que repite PR, build, pruebas, SignPath, instalación y aprobación. No se reutilizan firmas ni evidencia.
-- `QA-GATE-ACCEPTANCE-001` — La publicación permanece bloqueada hasta tener 25 historias aceptadas con evidencia real o una reducción de scope aprobada, además de SBOM/licencias completos y matriz Windows 10/11 aprobada.
+- `QA-GATE-ACCEPTANCE-001` — La publicación permanece bloqueada hasta que todas las historias del alcance vigente estén aceptadas con evidencia real o exista una reducción de scope aprobada, además de SBOM/licencias completos y matriz Windows 10/11 aprobada. El universo vigente se deriva de las fichas y debe coincidir exactamente con ambas matrices.
 
 La validación de Authenticode pertenece exclusivamente a `QA-GATE-SIGN-001`, después de recibir el artefacto firmado; nunca forma parte del gate unsigned previo.
 

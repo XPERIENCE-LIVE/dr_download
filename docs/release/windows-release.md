@@ -22,7 +22,7 @@ El pipeline compila React, empaqueta FastAPI con PyInstaller y crea un NSIS x64 
 - Repositorio de GitHub Releases configurado mediante `DR_DOWNLOAD_UPDATE_OWNER` y `DR_DOWNLOAD_UPDATE_REPO`.
 - Instalación, actualización, roll-forward y desinstalación del NSIS exacto probadas en Windows 10/11 limpios.
 - Descarga real autorizada de audio y video; archivos reproducibles y logs sin secretos.
-- Las 25 historias deben estar `accepted` con evidencia real o una reducción de scope debe estar aprobada por producto.
+- Todas las historias del alcance vigente, derivadas de las fichas y coincidentes con ambas matrices, deben estar `accepted` con evidencia real; alternativamente, producto debe aprobar una reducción de scope.
 
 Nunca se publica un instalador sin firmar. Un build interno o una ejecución sin SignPath completa debe registrar `publishable: false`.
 

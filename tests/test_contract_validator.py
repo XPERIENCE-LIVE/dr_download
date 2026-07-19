@@ -234,6 +234,23 @@ def test_missing_normative_document_is_rejected(tmp_path: Path):
     assert f"Falta el contrato obligatorio: {missing.as_posix()}" in errors
 
 
+@pytest.mark.parametrize(
+    "relative",
+    [
+        "docs/engineering/project-dna.md",
+        "docs/ai/definition-of-done.md",
+        "docs/release/windows-release.md",
+    ],
+)
+def test_normative_acceptance_contract_rejects_hardcoded_story_count(tmp_path: Path, relative: str):
+    root = make_repository(tmp_path)
+    (root / relative).write_text("Release bloqueada hasta aceptar 29 historias.\n", encoding="utf-8")
+
+    errors = validate_repository(root)
+
+    assert f"{relative}: conteo de historias hardcodeado 29 historias" in errors
+
+
 def test_missing_story_field_is_rejected(tmp_path: Path):
     root = make_repository(tmp_path, story=COMPLETE_STORY.replace("- **Riesgos:** red externa.\n", ""))
 

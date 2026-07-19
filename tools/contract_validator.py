@@ -96,6 +96,11 @@ TERMINAL_MANUAL_STATES = {"passed", "failed"}
 EXPLICIT_PENDING_VALUES = {"pending", "blocked"}
 GENERIC_TERMINAL_VALUES = EXPLICIT_PENDING_VALUES | {"unknown", "unassigned", "none", "n/a"}
 VERSION_PATTERN = re.compile(r"\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?")
+STORY_UNIVERSE_CONTRACTS = (
+    "docs/engineering/project-dna.md",
+    "docs/ai/definition-of-done.md",
+    "docs/release/windows-release.md",
+)
 
 
 def _read(path: Path, errors: list[str]) -> str:
@@ -415,6 +420,11 @@ def validate_repository(root: Path) -> list[str]:
     errors: list[str] = []
     evaluated_commit = _evaluated_commit(root)
     contracts = {relative: _read(root / relative, errors) for relative in REQUIRED_CONTRACTS}
+    for relative in STORY_UNIVERSE_CONTRACTS:
+        for match in re.finditer(r"\b\d+\s+historias\b", contracts[relative], re.IGNORECASE):
+            errors.append(
+                f"{relative}: conteo de historias hardcodeado {match.group(0).casefold()}"
+            )
 
     epics = contracts["docs/product/epics.md"]
     stories = contracts["docs/product/user-stories.md"]
