@@ -1,0 +1,29 @@
+# Guardrails de ingeniería IA
+
+- No afirmar éxito sin verificación fresca.
+- No producción sin prueba roja previa.
+- No borrar datos ni registrar secretos.
+- No aceptar rutas arbitrarias del renderer.
+- No usar shell para procesos externos si `spawn` basta.
+- No añadir dependencias sin necesidad demostrada.
+- No cambiar contratos sin pruebas y documentación.
+- Todo error visible debe explicar causa y acción.
+- Todo cambio debe dejar una prueba ejecutable.
+- Firma, hashes y rollback son obligatorios para publicar.
+- Consultar `docs/ai/change-ledger.md` antes de corregir un defecto; si su prueba ya pasa, no repetir la corrección.
+- No ampliar `scope-in` ni implementar `scope-out` sin ADR y aprobación de producto.
+- No declarar un criterio de éxito sin umbral y evidencia reproducible.
+- Ante ambigüedad de producto, detenerse y registrar una decisión; no inventar comportamiento.
+- Ante fallo parcial, preservar datos, versión anterior y diagnóstico redactado.
+- Leer y obedecer `docs/engineering/project-dna.md`; es un contrato bloqueante.
+- Producción opera fail-closed: nunca cambiar silenciosamente de motor, runtime, ruta, formato, UI o comportamiento.
+- Prohibidos fallbacks, placeholders, `TODO`, `FIXME`, `NotImplementedError` y pantallas de sustitución en producción.
+- Prohibido usar mocks, stubs, monkeypatches o simulaciones como evidencia de aceptación, E2E o release.
+- Un doble controlado puede aislar una unidad, pero su resultado solo demuestra esa unidad y debe complementarse con evidencia real del nivel de aceptación.
+- Obedecer todos los `QA-GATE-*` de `docs/engineering/project-dna.md`; una IA no puede omitirlos, reinterpretarlos como recomendación ni marcar un hallazgo abierto como resuelto sin evidencia fresca.
+- Mantener una sola identidad de artefacto desde build hasta publicación; toda recompilación reinicia pruebas, firma y aprobación.
+- Asociar la evidencia de cada etapa al commit, artifact-id y SHA-256 exactos; no mezclar resultados de runs, configuraciones o artefactos diferentes.
+- No integrar en `main` fuera de Pull Request ni eludir branch protection, CODEOWNERS, checks o aprobación humana.
+- No sustituir SignPath Foundation por un certificado CSC local en una release pública.
+- Publicar únicamente el hash firmado que atravesó el gate completo y recibió aprobación humana final.
+- Ante un defecto publicado, ejecutar roll-forward firmado desde el último tag bueno; no forzar downgrade ni reutilizar firma o evidencia.
