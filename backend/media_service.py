@@ -3,6 +3,7 @@
 from typing import Any
 
 from .engine_runner import inspect_with_engine, resolve_engine
+from .error_mapping import is_browser_cookie_error
 
 
 COOKIE_SOURCES = {"none", "edge", "firefox"}
@@ -60,4 +61,10 @@ def inspect_media(url: str, cookie_source: str = "none") -> dict[str, Any]:
     if cookie_source not in COOKIE_SOURCES:
         raise ValueError("Unsupported cookie source")
     engine = resolve_engine()
-    return normalize_info(inspect_with_engine(engine, url, cookie_source))
+    try:
+        return normalize_info(inspect_with_engine(engine, url, cookie_source))
+    except RuntimeError as exc:
+        # A locked/unreadable cookie store must not block inspecting public media.
+        if cookie_source != "none" and is_browser_cookie_error(str(exc)):
+            return normalize_info(inspect_with_engine(engine, url, "none"))
+        raise

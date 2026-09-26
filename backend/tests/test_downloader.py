@@ -187,7 +187,7 @@ def test_worker_uses_only_the_resolved_external_engine(monkeypatch, tmp_path):
 
     monkeypatch.setattr(downloader, "_queue", q)
     monkeypatch.setattr(downloader, "resolve_engine", lambda: "C:/engine/yt-dlp.exe")
-    monkeypatch.setattr(downloader, "download_with_engine", download)
+    monkeypatch.setattr(downloader, "download_with_cookie_fallback", download)
 
     downloader._worker()
 
@@ -207,7 +207,7 @@ def test_shutdown_with_full_queue(monkeypatch, tmp_path):
 
     monkeypatch.setattr(downloader, "_queue", q)
     monkeypatch.setattr(downloader, "resolve_engine", lambda: "C:/engine/yt-dlp.exe")
-    monkeypatch.setattr(downloader, "download_with_engine", download)
+    monkeypatch.setattr(downloader, "download_with_cookie_fallback", download)
     t = threading.Thread(target=downloader._worker)
     t.start()
     monkeypatch.setattr(downloader, "_workers", [t])
@@ -228,7 +228,7 @@ def test_worker_records_postprocessed_filename(monkeypatch, tmp_path):
 
     monkeypatch.setattr(downloader, "_queue", q)
     monkeypatch.setattr(downloader, "resolve_engine", lambda: "C:/engine/yt-dlp.exe")
-    monkeypatch.setattr(downloader, "download_with_engine", download)
+    monkeypatch.setattr(downloader, "download_with_cookie_fallback", download)
 
     downloader._worker()
 
@@ -354,7 +354,7 @@ def test_worker_enters_inspecting_before_starting_external_engine(monkeypatch, t
 
     monkeypatch.setattr(downloader, "_queue", q)
     monkeypatch.setattr(downloader, "resolve_engine", lambda: "yt-dlp.exe")
-    monkeypatch.setattr(downloader, "download_with_engine", download)
+    monkeypatch.setattr(downloader, "download_with_cookie_fallback", download)
 
     downloader._worker()
 
@@ -395,7 +395,7 @@ def test_worker_persists_structured_engine_error(monkeypatch, tmp_path):
 
     monkeypatch.setattr(downloader, "_queue", q)
     monkeypatch.setattr(downloader, "resolve_engine", lambda: "yt-dlp.exe")
-    monkeypatch.setattr(downloader, "download_with_engine", download)
+    monkeypatch.setattr(downloader, "download_with_cookie_fallback", download)
 
     downloader._worker()
 
@@ -416,7 +416,7 @@ def test_worker_logs_do_not_expose_urls_or_private_paths(monkeypatch, caplog, tm
 
     monkeypatch.setattr(downloader, "_queue", q)
     monkeypatch.setattr(downloader, "resolve_engine", lambda: "yt-dlp.exe")
-    monkeypatch.setattr(downloader, "download_with_engine", download)
+    monkeypatch.setattr(downloader, "download_with_cookie_fallback", download)
 
     downloader._worker()
 

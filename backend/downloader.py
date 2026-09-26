@@ -8,7 +8,7 @@ from queue import Empty, Full, Queue
 
 from .config import DEFAULT_CONFIG, load_config
 from .store import DownloadStore
-from .engine_runner import download_with_engine, resolve_engine
+from .engine_runner import download_with_cookie_fallback, resolve_engine
 from .error_mapping import classify_error
 
 # Maximum number of queued downloads at once
@@ -204,7 +204,7 @@ def _worker() -> None:
                 got_item = False
                 continue
             engine = resolve_engine()
-            filename = download_with_engine(
+            filename = download_with_cookie_fallback(
                 engine,
                 url,
                 format_id,

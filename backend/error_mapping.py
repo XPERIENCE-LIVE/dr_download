@@ -1,16 +1,29 @@
 """Safe, structured errors exposed by the local API and desktop UI."""
 
 
+# yt-dlp signatures for "could not read the browser's cookie store". These mean
+# cookies are unavailable (usually the browser is open and locking its DB), not
+# that the content itself failed — so callers can retry without cookies.
+_SESSION_MARKERS = ("dpapi", "decrypt")
+_LOCK_MARKERS = ("cookie database", "permission denied", "permissionerror")
+
+
+def is_browser_cookie_error(message: str) -> bool:
+    """True when the failure is only about reading browser cookies."""
+    text = (message or "").lower()
+    return any(marker in text for marker in _SESSION_MARKERS + _LOCK_MARKERS)
+
+
 def classify_error(message: str, cookie_source: str = "none") -> dict[str, str]:
     text = (message or "").lower()
     browser = "Edge" if cookie_source == "edge" else "Firefox"
-    if "dpapi" in text or "decrypt" in text:
+    if any(marker in text for marker in _SESSION_MARKERS):
         return {
             "code": "session_required",
             "message": "No se pudo leer la sesión protegida del navegador.",
             "recovery": f"Vuelve a iniciar sesión en {browser}, ciérralo completamente y reintenta.",
         }
-    if "cookie database" in text or "permission denied" in text or "permissionerror" in text:
+    if any(marker in text for marker in _LOCK_MARKERS):
         return {
             "code": "browser_locked",
             "message": "El navegador mantiene bloqueada su sesión.",

@@ -51,6 +51,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
   const [formatId, setFormatId] = useState("video-best");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [justQueued, setJustQueued] = useState(false);
 
   const validateDirectory = async (path = config.output_dir) => {
     if (!api?.validateDirectory) return { accepted: Boolean(path), valid: Boolean(path), path };
@@ -64,7 +65,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
 
   const inspect = async () => {
     if (!url.trim()) return;
-    setBusy(true); setError(""); setMedia(null);
+    setBusy(true); setError(""); setMedia(null); setJustQueued(false);
     try {
       const result = await api.inspectMedia({
         url: url.trim(),
@@ -101,6 +102,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
         cookie_source: config.cookie_consent ? config.cookie_source : "none"
       });
       setDownloads((current) => [task, ...current.filter((item) => item.id !== task.id)]);
+      setJustQueued(true);
     } catch (reason) {
       setError(reason?.detail?.message || reason?.message || t("unknownError"));
     } finally { setBusy(false); }
@@ -131,7 +133,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
           <button className="primary queue-button" onClick={enqueue} disabled={busy || !directoryCheck?.accepted}>{t("add")}</button></> : <div className="patch-empty"><span>01</span><p>{config.language === "es" ? "Inspecciona una señal para configurar su salida." : "Inspect a signal to configure its output."}</p></div>}
       </aside>
     </div>
-    {downloads.some((item) => item.status === "queued") && <div className="toast" role="status">{t("queued")}</div>}
+    {(justQueued || downloads.some((item) => item.status === "queued")) && <div className="toast" role="status">{t("queued")}</div>}
     <p className="legal-note">{t("legal")}</p>
   </section>;
 }

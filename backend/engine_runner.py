@@ -3,9 +3,13 @@
 import json
 import os
 import re
+import shutil
 import subprocess
+import uuid
 from pathlib import Path
 from typing import Callable
+
+from .error_mapping import is_browser_cookie_error
 
 
 PROGRESS_PREFIX = "__DR_PROGRESS__"
@@ -62,8 +66,13 @@ def build_command(
         command += ["--format", "bestaudio/best", "--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K"]
     elif format_id == "audio-original":
         command += ["--format", "bestaudio/best"]
-    elif str(format_id).isdigit():
-        command += ["--format", str(format_id)]
+    elif str(format_id).strip():
+        # A concrete stream chosen from the inspect list. Merge best audio so
+        # video-only streams keep sound; yt-dlp's default no-audio-multistreams
+        # leaves audio-only or already-muxed streams untouched. Works for the
+        # string format ids used by non-YouTube extractors, not just digits.
+        selected = str(format_id)
+        command += ["--format", f"{selected}+bestaudio/{selected}"]
     else:
         raise ValueError("Unsupported format")
     command.append(url)
@@ -134,6 +143,19 @@ def inspect_with_engine(executable: str | Path, url: str, cookie_source: str) ->
     return json.loads(result.stdout)
 
 
+def unique_destination(dest_dir: Path, name: str) -> Path:
+    """Return dest_dir/name, adding a ' (n)' suffix so an existing file is never
+    overwritten (Chrome-style). Prevents clobbering the user's library."""
+    target = dest_dir / name
+    if not target.exists():
+        return target
+    stem, suffix = target.stem, target.suffix
+    index = 1
+    while (dest_dir / f"{stem} ({index}){suffix}").exists():
+        index += 1
+    return dest_dir / f"{stem} ({index}){suffix}"
+
+
 def download_with_engine(
     executable: str | Path,
     url: str,
@@ -143,26 +165,64 @@ def download_with_engine(
     on_progress: Callable[[dict], None],
     cancelled,
 ) -> str | None:
-    process = subprocess.Popen(
-        build_command(executable, url, format_id, output_dir, cookie_source),
-        stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
-        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
-    )
-    filename = None
-    tail: list[str] = []
-    assert process.stdout is not None
-    for raw in process.stdout:
-        if cancelled.is_set():
-            _terminate_process_tree(process)
-            raise RuntimeError("Download cancelled")
-        line = raw.strip()
-        tail = (tail + [line])[-8:]
-        progress = parse_progress(line)
-        if progress:
-            on_progress(progress)
-        elif line.startswith(FILE_PREFIX):
-            filename = line[len(FILE_PREFIX):]
-    code = process.wait()
-    if code:
-        raise RuntimeError("\n".join(tail) or "Download failed")
-    return filename
+    # Download into an empty staging dir on the destination volume. yt-dlp skips
+    # ("already downloaded") when the target exists, so downloading straight into
+    # the user's folder silently no-ops on a name collision. Staging guarantees
+    # the download always runs; the finished file is then moved beside its peers
+    # with a collision-safe name.
+    destination = Path(output_dir)
+    staging = destination / f".dr-download-{uuid.uuid4().hex}"
+    staging.mkdir(parents=True, exist_ok=True)
+    try:
+        process = subprocess.Popen(
+            build_command(executable, url, format_id, str(staging), cookie_source),
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8", errors="replace",
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+        )
+        filename = None
+        tail: list[str] = []
+        assert process.stdout is not None
+        for raw in process.stdout:
+            if cancelled.is_set():
+                _terminate_process_tree(process)
+                raise RuntimeError("Download cancelled")
+            line = raw.strip()
+            tail = (tail + [line])[-8:]
+            progress = parse_progress(line)
+            if progress:
+                on_progress(progress)
+            elif line.startswith(FILE_PREFIX):
+                filename = line[len(FILE_PREFIX):]
+        code = process.wait()
+        if code:
+            raise RuntimeError("\n".join(tail) or "Download failed")
+        if not filename:
+            return None
+        final = unique_destination(destination, Path(filename).name)
+        os.replace(filename, final)  # same volume as staging → atomic rename
+        return str(final)
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+
+def download_with_cookie_fallback(
+    executable: str | Path,
+    url: str,
+    format_id: str,
+    output_dir: str,
+    cookie_source: str,
+    on_progress: Callable[[dict], None],
+    cancelled,
+) -> str | None:
+    """Download using browser cookies, but never let a locked cookie store block
+    public content: if reading cookies fails, retry once without them."""
+    try:
+        return download_with_engine(
+            executable, url, format_id, output_dir, cookie_source, on_progress, cancelled
+        )
+    except RuntimeError as exc:
+        if cookie_source != "none" and not cancelled.is_set() and is_browser_cookie_error(str(exc)):
+            return download_with_engine(
+                executable, url, format_id, output_dir, "none", on_progress, cancelled
+            )
+        raise

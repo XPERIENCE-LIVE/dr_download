@@ -103,6 +103,24 @@ describe("Dr. Download premium shell", () => {
     expect(await screen.findByText("En cola")).toBeInTheDocument();
   });
 
+  test("confirms the queue even when the worker races past 'queued' before the response arrives", async () => {
+    installApi({
+      // The single background worker can pick up the task before this
+      // resolves, so the backend may already report a later status.
+      createDownload: jest.fn().mockResolvedValue({ id: "task-1", status: "inspecting", progress: 0 })
+    });
+    render(<App />);
+    const input = await screen.findByLabelText("Enlace del video");
+    fireEvent.change(input, { target: { value: "https://youtu.be/example" } });
+    fireEvent.click(screen.getByRole("button", { name: "Analizar enlace" }));
+
+    expect(await screen.findByText("Video de prueba")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Agregar a la cola" }));
+
+    await waitFor(() => expect(window.drDownload.createDownload).toHaveBeenCalled());
+    expect(await screen.findByText("En cola")).toBeInTheDocument();
+  });
+
   test("validates the destination before queueing", async () => {
     installApi({
       validateDirectory: jest.fn().mockResolvedValue({
