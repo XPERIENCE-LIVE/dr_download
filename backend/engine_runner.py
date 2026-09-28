@@ -14,6 +14,7 @@ from .error_mapping import is_browser_cookie_error
 
 PROGRESS_PREFIX = "__DR_PROGRESS__"
 FILE_PREFIX = "__DR_FILE__"
+TRANSIENT_ATTEMPTS = 3
 
 
 def resolve_node_path() -> str | None:
@@ -54,6 +55,10 @@ def build_command(
         "--progress-template", f"download:{PROGRESS_PREFIX}%(progress._percent_str)s|%(progress.downloaded_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s",
         "--print", f"after_move:{FILE_PREFIX}%(filepath)s",
         "--output", str(Path(output_dir) / "%(title)s.%(ext)s"),
+        # Titles can be whole post descriptions (TikTok, X); NTFS rejects names
+        # over 255 chars, and 150 keeps the full path under Windows' 260 limit
+        # for typical folders.
+        "--trim-filenames", "150",
     ]
     ffmpeg = os.getenv("DR_DOWNLOAD_FFMPEG")
     if ffmpeg:
@@ -143,6 +148,22 @@ def inspect_with_engine(executable: str | Path, url: str, cookie_source: str) ->
     return json.loads(result.stdout)
 
 
+# yt-dlp replaces the chars Windows forbids in filenames (/ \ : * ? " < > |)
+# with full-width Unicode lookalikes. Map them to plain standard characters.
+_LOOKALIKES = str.maketrans({
+    "⧸": "-", "⧹": "-", "｜": "-", "：": "-",
+    "＊": "", "？": "", "＂": "'", "＜": "(", "＞": ")",
+})
+
+
+def standard_filename(name: str) -> str:
+    path = Path(name)
+    stem = path.stem.replace("： ", " - ").translate(_LOOKALIKES)
+    # Windows also rejects names ending in a dot or space.
+    stem = re.sub(r"\s+", " ", stem).strip(" .")
+    return f"{stem or 'download'}{path.suffix}"
+
+
 def unique_destination(dest_dir: Path, name: str) -> Path:
     """Return dest_dir/name, adding a ' (n)' suffix so an existing file is never
     overwritten (Chrome-style). Prevents clobbering the user's library."""
@@ -196,10 +217,17 @@ def download_with_engine(
         code = process.wait()
         if code:
             raise RuntimeError("\n".join(tail) or "Download failed")
-        if not filename:
-            return None
-        final = unique_destination(destination, Path(filename).name)
-        os.replace(filename, final)  # same volume as staging → atomic rename
+        # yt-dlp's stdout uses the console code page on Windows, so a printed
+        # path drops chars like the "⧸" it substitutes for "/" in titles. The
+        # staging dir is private to this download: trust what is on disk.
+        produced = Path(filename) if filename else None
+        if not produced or not produced.is_file():
+            files = [p for p in staging.iterdir() if p.is_file()]
+            if not files:
+                return None
+            produced = max(files, key=lambda p: p.stat().st_mtime)
+        final = unique_destination(destination, standard_filename(produced.name))
+        os.replace(produced, final)  # same volume as staging → atomic rename
         return str(final)
     finally:
         shutil.rmtree(staging, ignore_errors=True)
@@ -215,14 +243,17 @@ def download_with_cookie_fallback(
     cancelled,
 ) -> str | None:
     """Download using browser cookies, but never let a locked cookie store block
-    public content: if reading cookies fails, retry once without them."""
-    try:
-        return download_with_engine(
-            executable, url, format_id, output_dir, cookie_source, on_progress, cancelled
-        )
-    except RuntimeError as exc:
-        if cookie_source != "none" and not cancelled.is_set() and is_browser_cookie_error(str(exc)):
+    public content: if reading cookies fails, retry once without them. YouTube
+    also intermittently answers 403 on stream URLs; a fresh run gets new URLs."""
+    for attempt in range(TRANSIENT_ATTEMPTS):
+        try:
             return download_with_engine(
-                executable, url, format_id, output_dir, "none", on_progress, cancelled
+                executable, url, format_id, output_dir, cookie_source, on_progress, cancelled
             )
-        raise
+        except RuntimeError as exc:
+            if cancelled.is_set() or attempt == TRANSIENT_ATTEMPTS - 1:
+                raise
+            if cookie_source != "none" and is_browser_cookie_error(str(exc)):
+                cookie_source = "none"
+            elif "HTTP Error 403" not in str(exc):
+                raise

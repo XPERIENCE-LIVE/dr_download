@@ -15,6 +15,7 @@ from backend.engine_runner import (
     node_runtime_argument,
     parse_progress,
     resolve_engine,
+    standard_filename,
     unique_destination,
 )
 
@@ -82,6 +83,8 @@ def test_build_command_merges_audio_for_specific_streams(monkeypatch, tmp_path):
 
     # Numeric video-only stream (e.g. YouTube 1080p) must gain an audio track.
     numeric = build_command("yt-dlp.exe", "https://example.com", "137", str(tmp_path), "none")
+    # Long titles (post descriptions) must not exceed NTFS' 255-char name limit.
+    assert numeric[numeric.index("--trim-filenames") + 1] == "150"
     assert numeric[numeric.index("--format") + 1] == "137+bestaudio/137"
 
     # Non-numeric stream ids from other extractors must be accepted, not rejected.
@@ -197,6 +200,48 @@ def test_download_stages_then_moves_without_overwriting(tmp_path, monkeypatch):
     assert not any(p.name.startswith(".dr-download-") for p in dest.iterdir())  # staging cleaned
 
 
+def test_standard_filename_replaces_yt_dlp_lookalike_chars():
+    # yt-dlp swaps Windows-forbidden chars for full-width lookalikes.
+    assert standard_filename("Live (15⧸16 - 20⧸21.05.2022).mp4") == "Live (15-16 - 20-21.05.2022).mp4"
+    assert standard_filename("Artist： Song ｜ Live.mp3") == "Artist - Song - Live.mp3"
+    assert standard_filename("Why？ ＂Hi＂ ＜a＞ b＊.webm") == "Why 'Hi' (a) b.webm"
+    assert standard_filename("AC⧹DC 12：30.mp3") == "AC-DC 12-30.mp3"
+    # Accents and non-Latin scripts are valid on Windows and stay untouched.
+    assert standard_filename("Canción 東京.mp3") == "Canción 東京.mp3"
+    # Nothing left but forbidden chars → still a usable name.
+    assert standard_filename("？？？.mp4") == "download.mp4"
+
+
+def test_download_survives_filename_mangled_by_console_encoding(tmp_path, monkeypatch):
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+    dest = tmp_path / "out"
+    dest.mkdir()
+
+    class FakeProcess:
+        def __init__(self, line):
+            self.stdout = [line + "\n"]
+
+        def wait(self):
+            return 0
+
+    def fake_popen(command, **kwargs):
+        # yt-dlp saves "15/16" as "15⧸16" but its cp1252 stdout drops the
+        # unencodable char, so the printed path does not exist on disk.
+        staging = Path(command[command.index("--output") + 1]).parent
+        (staging / "Live (15⧸16).webm").write_bytes(b"media")
+        return FakeProcess(f"{FILE_PREFIX}{staging / 'Live (1516).webm'}")
+
+    with patch("backend.engine_runner.subprocess.Popen", side_effect=fake_popen):
+        result = download_with_engine(
+            "yt-dlp.exe", "https://x/v", "audio-original", str(dest), "none", lambda _d: None, threading.Event()
+        )
+
+    assert result == str(dest / "Live (15-16).webm")
+    assert (dest / "Live (15-16).webm").read_bytes() == b"media"
+
+
 def test_cookie_fallback_retries_without_cookies_when_browser_locks_store():
     cancelled = threading.Event()
     calls = []
@@ -214,6 +259,30 @@ def test_cookie_fallback_retries_without_cookies_when_browser_locks_store():
 
     assert result == "video.mp3"
     assert calls == ["edge", "none"]  # tried cookies first, then fell back
+
+
+def test_download_retries_transient_youtube_403_then_gives_up():
+    calls = []
+
+    def flaky(*args):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("ERROR: unable to download video data: HTTP Error 403: Forbidden")
+        return "video.mp4"
+
+    with patch("backend.engine_runner.download_with_engine", side_effect=flaky):
+        assert download_with_cookie_fallback(
+            "yt-dlp.exe", "https://x/v", "video-best", "/out", "none", lambda _d: None, threading.Event()
+        ) == "video.mp4"
+    assert len(calls) == 2
+
+    always = RuntimeError("HTTP Error 403: Forbidden")
+    with patch("backend.engine_runner.download_with_engine", side_effect=always) as engine:
+        with pytest.raises(RuntimeError, match="403"):
+            download_with_cookie_fallback(
+                "yt-dlp.exe", "https://x/v", "video-best", "/out", "none", lambda _d: None, threading.Event()
+            )
+    assert engine.call_count == 3  # bounded, never loops forever
 
 
 def test_cookie_fallback_does_not_mask_real_download_errors():
