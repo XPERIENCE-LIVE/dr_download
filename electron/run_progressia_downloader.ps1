@@ -23,21 +23,42 @@ function Invoke-NativeCommand {
     finally { Pop-Location }
 }
 
+function Get-DepsHash {
+    param([string[]]$Paths)
+    $sha256 = [System.Security.Cryptography.SHA256]::Create()
+    $combined = ""
+    foreach ($path in $Paths) {
+        if (Test-Path $path) { $combined += (Get-FileHash -Path $path -Algorithm SHA256).Hash }
+    }
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($combined)
+    return [System.BitConverter]::ToString($sha256.ComputeHash($bytes))
+}
+
 try {
     Write-Host "Preparando Dr. Download..."
     Assert-Command "python"
     Assert-Command "node"
     Assert-Command "npm.cmd"
 
-    & python -c "import fastapi, uvicorn, yt_dlp, httpx"
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Instalando dependencias del motor..."
+    $requirementsPath = Join-Path $projectRoot "backend/requirements.txt"
+    $packageJsonPath = Join-Path $scriptDirectory "package.json"
+    $packageLockPath = Join-Path $scriptDirectory "package-lock.json"
+    $stampPath = Join-Path $scriptDirectory ".deps-stamp.json"
+
+    $currentHash = Get-DepsHash -Paths @($requirementsPath, $packageJsonPath, $packageLockPath)
+    $previousHash = if (Test-Path $stampPath) { Get-Content $stampPath -Raw } else { "" }
+    $depsChanged = $currentHash -ne $previousHash
+
+    & python -c "import fastapi, uvicorn, yt_dlp, httpx" 2>$null
+    if ($LASTEXITCODE -ne 0 -or $depsChanged) {
+        Write-Host "Instalando/actualizando dependencias del motor..."
         Invoke-NativeCommand "python" @("-m", "pip", "install", "-r", "backend/requirements.txt") $projectRoot
     }
-    if (-not (Test-Path (Join-Path $scriptDirectory "node_modules"))) {
-        Write-Host "Instalando dependencias de la aplicacion..."
+    if (-not (Test-Path (Join-Path $scriptDirectory "node_modules")) -or $depsChanged) {
+        Write-Host "Instalando/actualizando dependencias de la aplicacion..."
         Invoke-NativeCommand "npm.cmd" @("install") $scriptDirectory
     }
+    Set-Content -Path $stampPath -Value $currentHash -NoNewline
 
     Write-Host "Compilando la interfaz..."
     Invoke-NativeCommand "npm.cmd" @("run", "build") $scriptDirectory
