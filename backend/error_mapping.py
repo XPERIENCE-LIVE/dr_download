@@ -35,6 +35,12 @@ def classify_error(message: str, cookie_source: str = "none") -> dict[str, str]:
             "message": "No hay espacio suficiente para completar la descarga.",
             "recovery": "Libera espacio o elige otra carpeta de destino.",
         }
+    if "ffmpeg is unavailable" in text:
+        return {
+            "code": "ffmpeg_missing",
+            "message": "Falta FFmpeg: sin él el vídeo se descargaría sin audio.",
+            "recovery": "Coloca ffmpeg.exe y ffprobe.exe en electron/resources/ffmpeg o reinstala la aplicación.",
+        }
     if "format is not available" in text or "requested format" in text:
         return {
             "code": "format_unavailable",

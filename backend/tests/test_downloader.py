@@ -74,6 +74,19 @@ def test_delete_download_preserves_completed_file(tmp_path):
     assert "task-1" not in downloader._history
 
 
+def test_progress_never_goes_backwards_when_audio_stream_starts(tmp_path):
+    # "video+audio" formats download two streams, each reporting 0-100%.
+    downloader._history["t"] = {"id": "t", "status": "inspecting"}
+    downloader._progress["t"] = 0
+
+    downloader._record_progress("t", {"progress": 79, "bytes_downloaded": 10})
+    downloader._record_progress("t", {"progress": 20, "bytes_downloaded": 2})
+
+    assert downloader._progress["t"] == 79
+    assert downloader._history["t"]["progress"] == 79
+    assert downloader._history["t"]["status"] == "downloading"
+
+
 def test_get_progress(tmp_path):
     downloader._progress["abc"] = 25
     assert downloader.get_progress("abc") == 25

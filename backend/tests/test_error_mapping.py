@@ -11,6 +11,7 @@ from backend.error_mapping import classify_error
         ("Permission denied: cookies.sqlite", "firefox", "browser_locked"),
         ("No space left on device", "none", "disk_full"),
         ("Requested format is not available", "none", "format_unavailable"),
+        ("FFmpeg is unavailable", "none", "ffmpeg_missing"),
         ("network timeout while reading", "none", "network_error"),
         ("extractor exploded", "none", "engine_error"),
     ],

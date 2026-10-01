@@ -51,7 +51,8 @@ def build_command(
     cookie_source: str,
 ) -> list[str]:
     command = [
-        str(executable), "--no-playlist", "--newline", "--js-runtimes", node_runtime_argument(),
+        # --print implies --quiet, which hides progress; --progress brings it back.
+        str(executable), "--no-playlist", "--newline", "--progress", "--js-runtimes", node_runtime_argument(),
         "--progress-template", f"download:{PROGRESS_PREFIX}%(progress._percent_str)s|%(progress.downloaded_bytes)s|%(progress.total_bytes_estimate)s|%(progress.speed)s|%(progress.eta)s",
         "--print", f"after_move:{FILE_PREFIX}%(filepath)s",
         "--output", str(Path(output_dir) / "%(title)s.%(ext)s"),
@@ -62,11 +63,17 @@ def build_command(
     ]
     ffmpeg = os.getenv("DR_DOWNLOAD_FFMPEG")
     if ffmpeg:
+        # On a missing location yt-dlp "continues without ffmpeg": video and
+        # audio are never merged and the user silently gets a mute video.
+        if not any((Path(ffmpeg) / name).is_file() for name in ("ffmpeg.exe", "ffmpeg")):
+            raise RuntimeError("FFmpeg is unavailable")
         command += ["--ffmpeg-location", ffmpeg]
     if cookie_source != "none":
         command += ["--cookies-from-browser", cookie_source]
+    # Prefer AAC (m4a) audio: YouTube's "best" audio is Opus, which Windows
+    # players, TVs and editors play silently inside an MP4.
     if format_id == "video-best":
-        command += ["--format", "bv*+ba/b", "--merge-output-format", "mp4"]
+        command += ["--format", "bv*+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"]
     elif format_id == "audio-mp3":
         command += ["--format", "bestaudio/best", "--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K"]
     elif format_id == "audio-original":
@@ -77,7 +84,7 @@ def build_command(
         # leaves audio-only or already-muxed streams untouched. Works for the
         # string format ids used by non-YouTube extractors, not just digits.
         selected = str(format_id)
-        command += ["--format", f"{selected}+bestaudio/{selected}"]
+        command += ["--format", f"{selected}+ba[ext=m4a]/{selected}+bestaudio/{selected}"]
     else:
         raise ValueError("Unsupported format")
     command.append(url)

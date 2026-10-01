@@ -67,6 +67,18 @@ def test_build_command_uses_bundled_node_runtime(monkeypatch, tmp_path):
     assert command[command.index("--js-runtimes") + 1] == f"node:{node}"
 
 
+def test_build_command_keeps_progress_despite_print_implying_quiet(monkeypatch, tmp_path):
+    # --print implies --quiet, which silences progress: the UI bar would stay at 0%.
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+
+    command = build_command("yt-dlp.exe", "https://example.com", "video-best", str(tmp_path), "none")
+
+    assert "--print" in command
+    assert "--progress" in command
+
+
 def test_build_command_rejects_blank_format(monkeypatch, tmp_path):
     node = tmp_path / "node.exe"
     node.write_bytes(b"node")
@@ -85,11 +97,23 @@ def test_build_command_merges_audio_for_specific_streams(monkeypatch, tmp_path):
     numeric = build_command("yt-dlp.exe", "https://example.com", "137", str(tmp_path), "none")
     # Long titles (post descriptions) must not exceed NTFS' 255-char name limit.
     assert numeric[numeric.index("--trim-filenames") + 1] == "150"
-    assert numeric[numeric.index("--format") + 1] == "137+bestaudio/137"
+    assert numeric[numeric.index("--format") + 1] == "137+ba[ext=m4a]/137+bestaudio/137"
 
     # Non-numeric stream ids from other extractors must be accepted, not rejected.
     string_id = build_command("yt-dlp.exe", "https://vimeo.com/1", "hls-2500", str(tmp_path), "none")
-    assert string_id[string_id.index("--format") + 1] == "hls-2500+bestaudio/hls-2500"
+    assert string_id[string_id.index("--format") + 1] == "hls-2500+ba[ext=m4a]/hls-2500+bestaudio/hls-2500"
+
+
+def test_best_video_prefers_aac_audio_that_windows_players_can_decode(monkeypatch, tmp_path):
+    # YouTube's "best" audio is Opus; inside an MP4 most Windows players, TVs and
+    # editors play it silently. AAC (m4a) first, any audio only as a fallback.
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+
+    command = build_command("yt-dlp.exe", "https://example.com", "video-best", str(tmp_path), "none")
+
+    assert command[command.index("--format") + 1] == "bv*+ba[ext=m4a]/bv*+ba/b"
 
 
 def test_build_command_uses_bundled_ffmpeg(monkeypatch, tmp_path):
@@ -97,12 +121,25 @@ def test_build_command_uses_bundled_ffmpeg(monkeypatch, tmp_path):
     node.write_bytes(b"node")
     ffmpeg = tmp_path / "ffmpeg"
     ffmpeg.mkdir()
+    (ffmpeg / "ffmpeg.exe").write_bytes(b"ffmpeg")
     monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
     monkeypatch.setenv("DR_DOWNLOAD_FFMPEG", str(ffmpeg))
 
     command = build_command("yt-dlp.exe", "https://example.com", "audio-mp3", str(tmp_path), "none")
 
     assert command[command.index("--ffmpeg-location") + 1] == str(ffmpeg)
+
+
+def test_build_command_fails_instead_of_producing_mute_video(monkeypatch, tmp_path):
+    # yt-dlp "continues without ffmpeg" on a missing location: video and audio
+    # are never merged and the user gets a video with no sound.
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+    monkeypatch.setenv("DR_DOWNLOAD_FFMPEG", str(tmp_path / "missing-ffmpeg"))
+
+    with pytest.raises(RuntimeError, match="FFmpeg is unavailable"):
+        build_command("yt-dlp.exe", "https://example.com", "video-best", str(tmp_path), "none")
 
 
 def test_parse_progress_returns_normalized_numbers():

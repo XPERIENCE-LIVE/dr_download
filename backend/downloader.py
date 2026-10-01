@@ -146,11 +146,13 @@ def _record_progress(task_id: str, data: dict) -> None:
     if percent is None:
         return
     with _state_lock:
-        _progress[task_id] = int(percent)
+        # Video+audio formats download two streams, each restarting at 0%.
+        percent = max(int(percent), _progress.get(task_id, 0))
+        _progress[task_id] = percent
         _history[task_id].update(
             {
                 "status": "downloading",
-                "progress": int(percent),
+                "progress": percent,
                 "bytes_downloaded": downloaded,
                 "total_bytes": total,
                 "speed_bps": data.get("speed_bps", data.get("speed")),
