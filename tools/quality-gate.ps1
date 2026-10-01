@@ -43,6 +43,7 @@ function Get-WorkspaceSha256 {
 }
 
 try {
+    Import-Module (Join-Path $PSHOME "Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1")
     python tools/contract_validator.py
     Assert-LastExitCode "contract-validator"
 

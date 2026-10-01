@@ -4,7 +4,7 @@ const fs = require("fs");
 const net = require("net");
 const path = require("path");
 const { spawn } = require("child_process");
-const { buildApiRequest } = require("./ipc-contract");
+const { requestBackend: sendBackendRequest } = require("./backend-client");
 const { resolveDownloadTarget, sanitizeNotification } = require("./file-actions");
 const { configureAppUpdater } = require("./app-updater");
 const { resolveFfmpegDirectory, resolveNodeExecutable } = require("./runtime-paths");
@@ -67,24 +67,7 @@ async function startBackend() {
 }
 
 async function requestBackend(operation, args) {
-  const request = buildApiRequest(operation, args);
-  const response = await fetch(`http://127.0.0.1:${backendPort}${request.path}`, {
-    method: request.method,
-    headers: {
-      "Content-Type": "application/json",
-      "X-Dr-Download-Token": sessionToken
-    },
-    body: request.body === undefined ? undefined : JSON.stringify(request.body)
-  });
-  const payload = await response.json();
-  if (!response.ok) {
-    const message = payload?.detail?.message || payload?.detail || `HTTP ${response.status}`;
-    const recovery = payload?.detail?.recovery;
-    const error = new Error(recovery ? `${message} ${recovery}` : message);
-    error.detail = payload?.detail;
-    throw error;
-  }
-  return payload;
+  return sendBackendRequest(`http://127.0.0.1:${backendPort}`, sessionToken, operation, args);
 }
 
 function assertTrustedSender(event) {
