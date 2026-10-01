@@ -64,7 +64,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
   };
 
   const inspect = async () => {
-    if (!url.trim()) return;
+    if (busy || !url.trim()) return;
     setBusy(true); setError(""); setMedia(null); setJustQueued(false);
     try {
       const result = await api.inspectMedia({
@@ -89,7 +89,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
   };
 
   const enqueue = async () => {
-    if (!media) return;
+    if (busy || !media) return;
     setBusy(true); setError("");
     try {
       const checked = await validateDirectory();
@@ -114,7 +114,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
         <header className="workspace-header"><div><p className="eyebrow">INPUT CHANNEL / 01</p><h1 id="new-title">{t("new")}</h1><p>{t("pasteHint")}</p></div><span className="status-chip"><b />{t("ready")}</span></header>
         <div className="composer">
           <label htmlFor="media-url">{t("url")}</label>
-          <div className="url-row"><input id="media-url" type="url" value={url} onChange={(event) => setUrl(event.target.value)} onKeyDown={(event) => event.key === "Enter" && inspect()} placeholder="https://youtu.be/…" /><button className="primary" onClick={inspect} disabled={busy || !url.trim()}>{busy ? t("inspecting") : t("inspect")}</button></div>
+          <div className="url-row"><input id="media-url" type="url" value={url} disabled={busy} onChange={(event) => { setUrl(event.target.value); setMedia(null); setJustQueued(false); setError(""); }} onKeyDown={(event) => event.key === "Enter" && inspect()} placeholder="https://youtu.be/…" /><button className="primary" onClick={inspect} disabled={busy || !url.trim()}>{busy ? t("inspecting") : t("inspect")}</button></div>
           <div className="track-labels"><span>ENLACE</span><span>INSPECCIÓN</span><span>FORMATO</span><span>COLA</span></div>
           <SignalLine progress={busy ? 42 : media ? 100 : 0} status={busy ? "inspecting" : media ? "completed" : "queued"} />
         </div>
@@ -193,37 +193,119 @@ export default function App() {
   const [config, setConfig] = useState(defaultConfig);
   const [downloads, setDownloads] = useState([]);
   const [directoryCheck, setDirectoryCheck] = useState(null);
+  const [loadError, setLoadError] = useState("");
+  const [configError, setConfigError] = useState("");
   const previousStatuses = useRef({});
   const downloadsLoaded = useRef(false);
+  const mounted = useRef(false);
+  const inFlight = useRef(null);
+  const downloadsRevision = useRef(0);
+  const downloadsSnapshot = useRef("[]");
+  const lastLoadError = useRef("");
   const t = useMemo(() => translator(config.language), [config.language]);
-  const refresh = useCallback(async () => { if (api) setDownloads(await api.listDownloads()); }, [api]);
+  const refresh = useCallback(() => {
+    if (!api) return Promise.resolve([]);
+    if (inFlight.current) return inFlight.current;
+    const revision = downloadsRevision.current;
+    inFlight.current = api.listDownloads().then((items) => {
+      if (mounted.current) {
+        if (!downloadsLoaded.current) {
+          previousStatuses.current = { ...Object.fromEntries(items.map((item) => [item.id, item.status])), ...previousStatuses.current };
+          downloadsLoaded.current = true;
+        }
+        if (revision === downloadsRevision.current) {
+          const snapshot = JSON.stringify(items);
+          if (snapshot !== downloadsSnapshot.current) {
+            downloadsSnapshot.current = snapshot;
+            setDownloads(items);
+          }
+        }
+        if (lastLoadError.current) {
+          lastLoadError.current = "";
+          setLoadError("");
+        }
+      }
+      return items;
+    }).catch((reason) => {
+      if (mounted.current) {
+        const message = reason?.detail?.message || reason?.message || t("unknownError");
+        if (message !== lastLoadError.current) {
+          lastLoadError.current = message;
+          setLoadError(message);
+        }
+      }
+      throw reason;
+    }).finally(() => { inFlight.current = null; });
+    return inFlight.current;
+  }, [api, t]);
+  const updateDownloads = useCallback((update) => {
+    downloadsRevision.current += 1;
+    downloadsSnapshot.current = null;
+    setDownloads(update);
+  }, []);
+  const refreshAfterAction = useCallback(async () => {
+    if (inFlight.current) await inFlight.current.catch(() => {});
+    return refresh();
+  }, [refresh]);
+  const activeDownloads = useMemo(() => downloads.filter((item) => ACTIVE.has(item.status)), [downloads]);
+  const hasActiveDownloads = activeDownloads.length > 0;
 
   useEffect(() => {
     if (!api) return;
-    Promise.all([api.getConfig(), api.listDownloads()]).then(([saved, items]) => {
-      previousStatuses.current = Object.fromEntries(items.map((item) => [item.id, item.status]));
-      downloadsLoaded.current = true;
+    mounted.current = true;
+    api.getConfig().then((saved) => {
+      if (!mounted.current) return;
       setConfig({ ...defaultConfig, ...saved });
-      setDownloads(items);
+    }).catch((reason) => {
+      if (mounted.current) setConfigError(reason?.detail?.message || reason?.message || String(reason));
     });
+    refresh().catch(() => {}); // refresh exposes failures in the interface.
+    return () => { mounted.current = false; };
+    // Configuration is loaded once for each bridge, independently of language changes.
   }, [api]);
   useEffect(() => {
-    if (!api || !downloadsLoaded.current) return;
+    if (!api) return;
+    if (!downloadsLoaded.current) {
+      previousStatuses.current = Object.fromEntries(downloads.map((item) => [item.id, item.status]));
+      return;
+    }
     const completed = findNewCompletions(previousStatuses.current, downloads);
     if (config.notifications) completed.forEach((item) => api.notify("Dr. Download", `${item.title || item.filename || t("completed")} · ${t("completed")}`));
     previousStatuses.current = Object.fromEntries(downloads.map((item) => [item.id, item.status]));
   }, [api, config.notifications, downloads, t]);
   useEffect(() => {
-    if (!api || process.env.NODE_ENV === "test") return undefined;
-    const timer = setInterval(refresh, 1500);
-    return () => clearInterval(timer);
-  }, [api, refresh]);
+    if (!api) return undefined;
+    let stopped = false;
+    let polling = false;
+    let timer;
+    const schedule = () => {
+      const delay = document.hidden ? (hasActiveDownloads ? 5000 : 30000) : (hasActiveDownloads ? 1500 : 10000);
+      timer = setTimeout(poll, delay);
+    };
+    const poll = async () => {
+      clearTimeout(timer);
+      if (polling || stopped) return;
+      polling = true;
+      try { await refresh(); }
+      catch { /* refresh exposes the error and the next scheduled read retries. */ }
+      finally { polling = false; if (!stopped) schedule(); }
+    };
+    const onVisibilityChange = () => {
+      clearTimeout(timer);
+      if (!document.hidden) poll();
+      else if (!polling) schedule();
+    };
+    schedule();
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => { stopped = true; clearTimeout(timer); document.removeEventListener("visibilitychange", onVisibilityChange); };
+  }, [api, refresh, hasActiveDownloads]);
 
   const nav = ["new", "queue", "history", "settings", "about"];
-  const activeTransfer = downloads.find((item) => ACTIVE.has(item.status));
+  const activeTransfer = activeDownloads[0];
+  const appError = configError || loadError;
   return <div className={`app-shell${activeTransfer ? " has-transfer" : ""}`}>
-    <header className="deck-topbar"><div className="brand"><div className="brand-monogram">D<span>↓</span></div><div><strong>Dr. Download</strong><small>MEDIA SIGNAL</small></div></div><nav aria-label="Principal">{nav.map((name) => <button key={name} className={view === name ? "active" : ""} onClick={() => setView(name)}><Icon name={name} /><span>{t(name)}</span>{name === "queue" && downloads.filter((item) => ACTIVE.has(item.status)).length > 0 && <b>{downloads.filter((item) => ACTIVE.has(item.status)).length}</b>}</button>)}</nav><div className="engine-ready"><span className="pulse" />{config.language === "es" ? "MOTOR LOCAL LISTO" : "LOCAL ENGINE READY"}</div></header>
-    <main>{view === "new" && <NewDownload api={api} config={config} setConfig={setConfig} directoryCheck={directoryCheck} setDirectoryCheck={setDirectoryCheck} downloads={downloads} setDownloads={setDownloads} t={t} />}{["queue", "history"].includes(view) && <DownloadsView mode={view} downloads={downloads} api={api} refresh={refresh} t={t} />}{view === "settings" && <Settings config={config} setConfig={setConfig} api={api} t={t} />}{view === "about" && <About t={t} />}</main>
+    <header className="deck-topbar"><div className="brand"><div className="brand-monogram">D<span>↓</span></div><div><strong>Dr. Download</strong><small>MEDIA SIGNAL</small></div></div><nav aria-label="Principal">{nav.map((name) => <button key={name} className={view === name ? "active" : ""} onClick={() => setView(name)}><Icon name={name} /><span>{t(name)}</span>{name === "queue" && hasActiveDownloads && <b>{activeDownloads.length}</b>}</button>)}</nav><div className="engine-ready"><span className="pulse" />{config.language === "es" ? "MOTOR LOCAL LISTO" : "LOCAL ENGINE READY"}</div></header>
+    <main>{appError && <div className="error-card" role="alert"><strong>{t("errorTitle")}</strong><span>{appError}</span></div>}{view === "new" && <NewDownload api={api} config={config} setConfig={setConfig} directoryCheck={directoryCheck} setDirectoryCheck={setDirectoryCheck} downloads={downloads} setDownloads={updateDownloads} t={t} />}{["queue", "history"].includes(view) && <DownloadsView mode={view} downloads={downloads} api={api} refresh={refreshAfterAction} t={t} />}{view === "settings" && <Settings config={config} setConfig={setConfig} api={api} t={t} />}{view === "about" && <About t={t} />}</main>
     <TransferStrip item={activeTransfer} language={config.language} />
     {!config.cookie_consent && config.cookie_source !== "none" && <div className="consent"><div><strong>{t("consentTitle")}</strong><p>{t("consentBody")}</p></div><button className="primary" onClick={() => { const next = { ...config, cookie_consent: true }; setConfig(next); api?.updateConfig(next); }}>{t("consent")}</button></div>}
   </div>;

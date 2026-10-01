@@ -114,7 +114,7 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Flujo principal:** backend filtra formatos → normaliza presets → UI permite seleccionar uno → ID seleccionado se envía al crear descarga.
 - **Flujos alternativos:** storyboard/MHTML se omiten; formato desconocido se rechaza antes de ejecutar; ausencia de formatos muestra acción sugerida.
 - **Given/When/Then:** Given formatos con storyboard/MHTML, When se normalizan, Then no aparecen. Given un `format_id` desconocido, When se prepara la descarga, Then se rechaza de forma estructurada.
-- **Prueba unitaria:** `test_normalize_info_omits_storyboard_and_mhtml_formats`; `test_build_command_rejects_unknown_format`.
+- **Prueba unitaria:** `test_normalize_info_omits_storyboard_and_mhtml_formats`; `test_build_command_rejects_blank_format`. La validación de un ID desconocido respecto de la inspección sigue pendiente de cobertura.
 - **Prueba de integración:** `test_inspect_media_returns_normalized_metadata`; la creación con el format_id devuelto sigue pendiente de evidencia E2E.
 - **Prueba E2E:** `MAN-US-012`: seleccionar audio y vídeo reales y confirmar que la opción enviada existe en la inspección.
 - **Evidencia requerida:** lista de formatos normalizada, llamada IPC y reporte de descarga por formato.

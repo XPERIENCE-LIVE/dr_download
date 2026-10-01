@@ -54,6 +54,7 @@
     "files": [
       "dist/**/*",
       "electron.js",
+      "backend-client.js",
       "preload.js",
       "ipc-contract.js",
       "file-actions.js",

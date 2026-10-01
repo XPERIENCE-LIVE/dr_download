@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 import shutil
 import sqlite3
+from contextlib import contextmanager
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
@@ -15,10 +17,15 @@ class DownloadStore:
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._initialize()
 
-    def _connect(self) -> sqlite3.Connection:
+    @contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
         connection = sqlite3.connect(self.path, timeout=5)
         connection.row_factory = sqlite3.Row
-        return connection
+        try:
+            with connection:
+                yield connection
+        finally:
+            connection.close()
 
     def _initialize(self) -> None:
         with self._connect() as connection:
@@ -69,11 +76,23 @@ class DownloadStore:
             connection.execute("DELETE FROM downloads WHERE id = ?", (task_id,))
 
     def replace_all(self, items: list[dict[str, Any]]) -> None:
+        payloads = [(item["id"], json.dumps(item, ensure_ascii=False)) for item in items]
+        ids = {task_id for task_id, _ in payloads}
+        if len(ids) != len(payloads):
+            raise sqlite3.IntegrityError("Duplicate download IDs in history snapshot")
         with self._connect() as connection:
-            connection.execute("DELETE FROM downloads")
+            existing = dict(connection.execute("SELECT id, payload FROM downloads"))
             connection.executemany(
-                "INSERT INTO downloads(id, payload) VALUES (?, ?)",
-                [(item["id"], json.dumps(item, ensure_ascii=False)) for item in items],
+                "DELETE FROM downloads WHERE id = ?",
+                [(task_id,) for task_id in existing if task_id not in ids],
+            )
+            connection.executemany(
+                """
+                INSERT INTO downloads(id, payload) VALUES (?, ?)
+                ON CONFLICT(id) DO UPDATE SET payload = excluded.payload
+                """,
+                [(task_id, payload) for task_id, payload in payloads
+                 if existing.get(task_id) != payload],
             )
 
     def migrate_json(self, legacy_path: str | Path) -> int:

@@ -23,3 +23,21 @@ def test_classify_error_returns_safe_actionable_codes(message, cookie_source, co
     assert result["message"]
     assert result["recovery"]
     assert message not in result.values()
+
+
+@pytest.mark.parametrize("cookie_source", ["none", "edge", "firefox"])
+def test_age_restriction_explains_required_account_instead_of_engine_update(cookie_source):
+    result = classify_error(
+        "ERROR: [youtube] _5YRkb6FEGY: Sign in to confirm your age. "
+        "Use --cookies-from-browser or --cookies for the authentication.",
+        cookie_source,
+    )
+    assert result["code"] == "age_restricted"
+    assert "edad" in result["message"]
+    assert "Actualiza" not in result["recovery"]
+    if cookie_source == "none":
+        assert "Ajustes" in result["recovery"] and "cookies" in result["recovery"]
+    else:
+        browser = "Edge" if cookie_source == "edge" else "Firefox"
+        assert browser in result["recovery"]
+        assert "cuenta" in result["recovery"]

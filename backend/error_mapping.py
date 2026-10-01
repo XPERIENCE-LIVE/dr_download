@@ -17,6 +17,19 @@ def is_browser_cookie_error(message: str) -> bool:
 def classify_error(message: str, cookie_source: str = "none") -> dict[str, str]:
     text = (message or "").lower()
     browser = "Edge" if cookie_source == "edge" else "Firefox"
+    if "sign in to confirm your age" in text:
+        recovery = (
+            "En Ajustes, selecciona Edge o Firefox como fuente de cookies. "
+            "Inicia sesión en YouTube con una cuenta que pueda ver el vídeo y vuelve a analizar el enlace."
+            if cookie_source == "none" else
+            f"Abre el vídeo en {browser} con una cuenta con la edad verificada; "
+            f"después cierra {browser} y vuelve a analizar el enlace."
+        )
+        return {
+            "code": "age_restricted",
+            "message": "YouTube exige iniciar sesión para verificar la edad y acceder a este vídeo.",
+            "recovery": recovery,
+        }
     if any(marker in text for marker in _SESSION_MARKERS):
         return {
             "code": "session_required",
