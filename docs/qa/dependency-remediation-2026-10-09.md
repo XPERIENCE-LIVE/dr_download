@@ -19,6 +19,8 @@ El cargador de Istanbul llama a `load()`, conservado en la [migración oficial d
 
 El gate ahora bloquea vulnerabilidades moderadas o superiores en todo el árbol npm. Su prueba contractual falló con el umbral anterior. El lockfile debe verificarse con npm 10, usado por CI, incluyendo peers opcionales; la instalación local no sustituye `npm ci` en Windows limpio.
 
+CI detectó ausencia de `@emnapi/core` y `@emnapi/runtime` 1.11.3 después de que herramientas locales reescribieran el lockfile. Se conservan las resoluciones opcionales del lockfile completo; una prueba adicional comprueba los rangos reales de los peers de `@napi-rs/wasm-runtime` y falló antes de restaurarlas. Ejecutar el gate después del empaquetador permite detectar también una reescritura posterior.
+
 ## Evidencia
 
 La auditoría previa está conservada localmente en `artifacts/quality/npm-audit-moderate-before.json`. `npm ci` con npm 10.9.9 completó una instalación nueva con código 0. Las auditorías posteriores de todo el árbol y de producción registran cero vulnerabilidades en `artifacts/quality/npm-audit-moderate-after.json` y `npm-audit-production-after.json`. Las tres pruebas de compatibilidad pasan después de instalar; `npm ls` confirma YAML 4.3.2, global-agent 4.1.3 y ausencia de sprintf-js. No se actualizaron las otras versiones directas ni el runtime Electron.

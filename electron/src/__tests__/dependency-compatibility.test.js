@@ -10,6 +10,15 @@ test("the locked toolchain contains no vulnerable sprintf-js package", () => {
   expect(Object.keys(lock.packages).filter(name => /(^|\/)node_modules\/sprintf-js$/.test(name))).toEqual([]);
 });
 
+test("the lockfile preserves optional WASM peers required by clean CI installs", () => {
+  const { packages } = require("../../package-lock.json");
+  const { satisfies } = require("semver");
+  const consumer = packages["node_modules/@napi-rs/wasm-runtime"];
+  for (const [name, range] of Object.entries(consumer.peerDependencies)) {
+    expect(satisfies(packages[`node_modules/${name}`]?.version || "", range)).toBe(true);
+  }
+});
+
 test("Istanbul still loads YAML inheritance and normalizes coverage options", async () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "dr-download-nyc-"));
   try {
