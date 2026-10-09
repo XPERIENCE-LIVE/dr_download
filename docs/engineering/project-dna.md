@@ -16,6 +16,8 @@ Este contrato es normativo para personas, IA, CI y releases. Si una regla no pue
 - Una historia solo puede quedar `accepted` con evidencia producida por los procesos, binarios, filesystem, SQLite, IPC y red reales que correspondan a su nivel de aceptación.
 - La evidencia identifica versión, commit, sistema operativo, arquitectura, configuración, fecha, comando, código de salida y SHA-256 de los artefactos relevantes.
 - Una prueba externa variable, como YouTube, demuestra el resultado observado para esa fecha y configuración; no garantiza el comportamiento futuro del proveedor.
+- La aplicación se instala y ejecuta directamente en Windows con los runtimes incluidos. La aceptación de instalación usa Windows limpio sin Python/Node externos, en equipo físico o VM; la virtualización solo aísla pruebas y nunca forma parte del runtime del producto.
+- El gate PR audita todo el árbol npm, incluidas herramientas de desarrollo, y bloquea severidad moderada o superior. Las correcciones transitivas se fijan en el lockfile y se verifican contra consumidores reales, sin ocultar avisos ni forzar downgrades para conseguir un resultado verde.
 
 ## Prohibiciones operativas
 

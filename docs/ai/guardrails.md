@@ -6,6 +6,8 @@
 - No aceptar rutas arbitrarias del renderer.
 - No usar shell para procesos externos si `spawn` basta.
 - No añadir dependencias sin necesidad demostrada.
+- Auditar dependencias de producción y desarrollo con `npm audit --prefix electron --audit-level=moderate`; no suprimir avisos ni aplicar `npm audit fix --force` sin analizar compatibilidad. Un override transitivo requiere prueba del consumidor real y lockfile reproducible.
+- Preservar instalación y ejecución directa en Windows con runtimes incluidos. Una VM limpia o un equipo físico limpio comprueban independencia del entorno de desarrollo; nunca son requisitos de uso.
 - No cambiar contratos sin pruebas y documentación.
 - Todo error visible debe explicar causa y acción.
 - Todo cambio debe dejar una prueba ejecutable.

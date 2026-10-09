@@ -6,3 +6,5 @@ The application loads only packaged UI resources, keeps the renderer sandboxed, 
 
 Public releases must use a current supported Electron version, a signed installer, verified yt-dlp/FFmpeg binaries and dependency audits. Never disable sandbox, context isolation, CSP or signature verification to work around a release problem.
 
+The PR gate runs `npm audit --prefix electron --audit-level=moderate` across production and development dependencies. Transitive overrides must preserve tested consumer behavior and a reproducible lockfile; do not suppress advisories or force toolchain downgrades to hide findings. See the [2026-10-09 dependency remediation](docs/qa/dependency-remediation-2026-10-09.md).
+

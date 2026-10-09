@@ -26,7 +26,7 @@ Formato: `Historia | contrato | símbolo/componente | prueba actual | evidencia 
 | US-041 | enumerated IPC | preload/ipc-contract/window | IPC contract + `electron-security.test.js` | packaged abuse E2E | 2.1.0 | partial |
 | US-042 | loopback + token | backend launcher/FastAPI | token protection | GAP-US-042-LISTENER | 2.1.0 | partial |
 | US-043 | local diagnostics | logging/diagnostics/UI | data-dir logging + redacted bounded export + UI action | packaged export E2E | 2.1.0 | partial |
-| US-050 | standalone installer | PyInstaller/electron-builder/runtime | package build + bundled FFmpeg/Node resolvers + packaged smoke | clean Windows 10/11 VM | 2.1.0 | partial |
+| US-050 | standalone installer | PyInstaller/electron-builder/runtime | package build + bundled FFmpeg/Node resolvers + packaged smoke | clean Windows 10/11, physical PC or VM | 2.1.0 | partial |
 | US-051 | verified update | engine/app updater | checksum + promotion + active wait | E2E-US-051 | 2.1.0 | partial |
 | US-052 | rollback | engine/app updater | reject checksum + retry interval | GAP-US-052-APP | 2.1.0 | partial |
 | US-053 | signed NSIS | electron-builder/release | unsigned NSIS build | Authenticode `Valid` + SHA-256 | 2.1.0 | blocked |

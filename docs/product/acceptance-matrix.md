@@ -26,7 +26,7 @@ Estados: `covered` tiene evidencia automatizada suficiente; `partial` tiene cobe
 | US-041 | contrato IPC + sender/frame/navegación | renderer abusivo empaquetado | partial | E2E de abuso |
 | US-042 | token API | inspección de listener loopback | partial | GAP-US-042-LISTENER |
 | US-043 | logs en userData + exportación redactada | exportación empaquetada | partial | E2E-US-043 |
-| US-050 | PyInstaller/NSIS + FFmpeg/Node incluidos | VM sin Python/Node | partial | matriz Windows limpia |
+| US-050 | PyInstaller/NSIS + FFmpeg/Node incluidos | Windows limpio físico o VM, sin Python/Node externos | partial | matriz Windows limpia |
 | US-051 | checksum + promoción + espera activa | actualización N→N+1 | partial | E2E-US-051 |
 | US-052 | checksum inválido + retry interval | rollback app/NSIS | partial | GAP-US-052-APP |
 | US-053 | NSIS construido | firma e instalación limpia | blocked | certificado Authenticode |

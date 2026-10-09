@@ -14,6 +14,8 @@ npm run package:win --prefix electron
 
 El pipeline compila React, empaqueta FastAPI con PyInstaller y crea un NSIS x64 por usuario. La desinstalación conserva preferencias e historial.
 
+El usuario instala y abre la aplicación directamente en Windows. No necesita VM, Docker, Python ni Node externos. «Windows limpio» describe el entorno de aceptación: un equipo físico o una VM Windows 10/11 sin herramientas de desarrollo ni runtimes externos. La VM permite repetir instalación/desinstalación sin alterar una instalación habitual; ejecutar `win-unpacked` en el equipo de desarrollo no demuestra por sí solo este criterio. El primer arranque sin motor verificado requiere conexión para obtenerlo y comprobar su hash.
+
 ## Puertas de publicación
 
 - `QA-GATE-RELEASE-UNSIGNED-001`: GitHub Actions construye un único NSIS x64 y registra artifact-id, commit y SHA-256 unsigned. El contrato objetivo `tools/quality-gate.ps1 -Level release` debe probar ese artefacto, finalizar con código 0 y registrar `publishable: false`.

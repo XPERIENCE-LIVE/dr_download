@@ -2,6 +2,8 @@
 
 Aplicación privada para Windows que inspecciona, organiza y descarga contenido multimedia mediante yt-dlp. La interfaz Electron/React administra un backend FastAPI local; los datos, preferencias e historial permanecen en el equipo.
 
+Se instala y ejecuta directamente en Windows como aplicación de escritorio, sin VM, Docker, Python ni Node externos. Electron usa tecnologías web para la interfaz; no es una interfaz WinUI/C++ reescrita. Una VM limpia es solo una opción para probar la instalación sin herramientas de desarrollo; un equipo físico limpio sirve para la misma comprobación.
+
 ## Funciones
 
 - Inspección previa con título, autor, duración, miniatura y formatos.

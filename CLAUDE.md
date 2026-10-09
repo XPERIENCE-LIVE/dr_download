@@ -9,3 +9,4 @@ Aplicación local Windows Electron/React + FastAPI + yt-dlp/FFmpeg. Lee primero 
 - Cambia código de producción con prueba roja y verde verificables. Toda prueba declarada debe existir. Ejecuta el validador contractual y los checks correspondientes; `partial` y `pending` no significan aceptación.
 - Mantén exactamente el mismo universo de historias en épicas, fichas, aceptación, trazabilidad y matriz manual. Nunca cambies auditorías históricas para ocultar un gap ni inventes ejecutor, SHA o evidencia.
 - No publiques en `main`, no omitas gates ni marques evidencia de otro commit como actual. Las aprobaciones de producto no sustituyen revisión humana, firma ni aceptación de release.
+- Conserva la ejecución directa en Windows con runtimes incluidos; VM/equipo físico limpio son entornos de prueba. El gate npm bloquea severidad moderada o superior, también en herramientas de desarrollo; no ocultes avisos mediante exclusiones o downgrades forzados.

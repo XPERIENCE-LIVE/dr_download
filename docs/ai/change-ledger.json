@@ -61,7 +61,7 @@
         "uses the packaged Node runtime instead of a machine installation"
       ],
       "evidence": [],
-      "blocking_reason": "Falta evidencia de VM limpia y manifiesto de runtime ligado al artefacto."
+      "blocking_reason": "Falta evidencia de instalación Windows limpia (equipo físico o VM, sin Python/Node externos) y manifiesto de runtime ligado al artefacto."
     },
     {
       "id": "GAP-US-041-ELECTRON",

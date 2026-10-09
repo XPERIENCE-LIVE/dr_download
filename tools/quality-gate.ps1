@@ -65,7 +65,7 @@ try {
     npm --prefix electron run build
     Assert-LastExitCode "vite-build"
 
-    npm audit --prefix electron --audit-level=high
+    npm audit --prefix electron --audit-level=moderate
     Assert-LastExitCode "npm-security-audit"
 
     if ($Level -eq "release") {

@@ -2,6 +2,8 @@
 
 ## Español
 
+Instala Dr. Download y ábrelo directamente en Windows. No necesitas una máquina virtual, Docker, Python ni Node instalados por separado. El primer inicio necesita Internet para obtener y verificar el motor de descarga si aún no está disponible. Las referencias a «VM limpia» en las pruebas describen un entorno de validación, no un requisito de uso.
+
 1. Abre **Nueva descarga**, pega el enlace y pulsa **Analizar enlace**.
 2. Si el contenido requiere sesión, elige Edge o Firefox, autoriza el uso temporal y cierra el navegador completamente.
 3. Elige **Vídeo compatible** (MP4 H.264/AAC), **Mejor vídeo** o **Audio MP3** y carpeta. **Formatos avanzados** incluye audio original y streams individuales. Si falta tamaño, se indica **Tamaño desconocido**; una estimación no garantiza el tamaño final.
@@ -21,6 +23,8 @@ Cada navegador necesita autorización propia: cambiar de Edge a Firefox requiere
 Los errores incluyen causa y acción: volver a analizar, reintentar tarea, elegir carpeta, revisar Ajustes o exportar diagnóstico local. Reintentar tarea conserva su ID. Si el servicio local está desconectado, reintenta o reinicia; reiniciar descarta el borrador. El preset compatible falla explícitamente si el origen no ofrece los codecs requeridos; puedes elegir otro resultado conscientemente.
 
 ## English
+
+Install Dr. Download and open it directly on Windows. No virtual machine, Docker, separately installed Python or Node is required. First launch needs Internet to obtain and verify the download engine if it is not already available. A “clean VM” is a test environment, not a requirement for using the application.
 
 1. Open **New download**, paste the link and select **Inspect link**.
 2. If a session is required, choose Edge or Firefox, allow temporary access and close the browser completely.

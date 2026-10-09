@@ -27,4 +27,4 @@
 
 La firma Authenticode pública normalmente requiere un certificado de pago o uno aportado por un tercero. Sin certificado, el proyecto sigue siendo open source y distribuible como build interna/no firmada, pero no cumple el criterio de publicación comercial firmada. No se debe simular una firma.
 
-El runtime JavaScript exigido por yt-dlp se copia durante `prepare:runtime` y se resuelve desde `resources/node/node.exe`. La aceptación final aún requiere una VM sin Node instalado.
+El runtime JavaScript exigido por yt-dlp se copia durante `prepare:runtime` y se resuelve desde `resources/node/node.exe`. La aplicación corre directamente en Windows con Electron y el backend empaquetado; no requiere virtualización. La aceptación final aún requiere instalación en Windows limpio, físico o virtual, sin Node/Python externos.

@@ -379,10 +379,10 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Flujos alternativos:** recurso empaquetado ausente bloquea release con diagnóstico; instalación previa se actualiza conservando datos.
 - **Given/When/Then:** Given Windows sin Python/Node, When instala e inicia, Then backend y motor funcionan. Given recurso requerido ausente, When se ejecuta smoke, Then release falla antes de publicar.
 - **Prueba unitaria:** `test_build_command_uses_bundled_node_runtime`; `uses the packaged Node runtime instead of a machine installation`.
-- **Prueba de integración:** la construcción NSIS existe, pero la ejecución en VM limpia permanece pendiente.
+- **Prueba de integración:** la construcción NSIS existe, pero instalarla en Windows limpio (equipo físico o VM) permanece pendiente. La VM no es requisito de uso: la aplicación se ejecuta directamente en Windows.
 - **Prueba E2E:** `MAN-US-050`: instalación limpia Windows 10/11, audio y vídeo reales sin runtimes externos.
 - **Evidencia requerida:** inventario previo de software, log de instalación, health check y archivos reproducibles.
-- **Riesgos:** falta ejecutar la matriz final en una VM sin Node/Python instalados.
+- **Riesgos:** falta ejecutar la matriz final en Windows limpio sin Node/Python externos, físico o virtual.
 
 ### US-051 — Actualización verificada
 
@@ -428,7 +428,7 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Given/When/Then:** Given certificado válido, When se firma, Then `Get-AuthenticodeSignature` devuelve `Valid`. Given certificado ausente, When se construye, Then el artefacto no se declara release pública.
 - **Prueba unitaria:** no aplica a la criptografía del sistema; la validación de configuración de firma permanece pendiente.
 - **Prueba de integración:** el build NSIS está cubierto parcialmente; la firma actual no es válida y el criterio no está cumplido.
-- **Prueba E2E:** `MAN-US-053`: instalar, actualizar y desinstalar el artefacto firmado en VM limpia.
+- **Prueba E2E:** `MAN-US-053`: instalar, actualizar y desinstalar el artefacto firmado en Windows limpio, físico o virtual.
 - **Evidencia requerida:** firma válida, timestamp, SHA-256, SBOM/avisos y checklist firmado.
 - **Riesgos:** certificado Authenticode normalmente tiene coste; contradicción con coste cero debe resolverse mediante certificado donado/patrocinado o distribución abierta no firmada.
 

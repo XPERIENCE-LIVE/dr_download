@@ -77,7 +77,7 @@ $evidence = [ordered]@{
     artifacts = $identity
     installer_authenticode = (Get-AuthenticodeSignature -LiteralPath $installer).Status.ToString()
     installer_lifecycle_verified = $false
-    installer_lifecycle_limit = "NSIS writes shared per-user registry and shortcuts; isolated Windows account or VM required"
+    installer_lifecycle_limit = "NSIS writes shared per-user registry and shortcuts; use an isolated Windows test account, a clean physical PC or a VM"
     public_release_ready = $false
     started_at_utc = (Get-Date).ToUniversalTime().ToString("o")
     downloads = @(); downloaded_files_preserved = $false
