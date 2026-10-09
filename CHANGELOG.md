@@ -11,6 +11,7 @@
 - Smoke de tres formatos con identidad explícita del paquete, H.264/AAC comprobado por FFprobe y hashes de archivos preservados; no acredita instalación/desinstalación ni firma.
 - Dependencias compatibles actualizadas y herramientas Jest/Babel-Jest/jsdom 30.5.2 para eliminar vulnerabilidades altas del gate. La auditoría conserva 26 moderadas transitivas de desarrollo; producción sin hallazgos npm.
 - Fichas, matrices, CLAUDE.md, ADN y guardrails enlazan el contrato; nuevas historias permanecen partial y su aceptación Windows pendiente. Los conteos y smokes registrados abajo son históricos, no evidencia del commit actual.
+- Corregido el límite de arranque: el helper existente espera salud autenticada hasta 120 s, limita cada petición a 2 s y falla pronto si sale el backend. Un diagnóstico de 26,68 s en perfil nuevo motivó reemplazar los 15 s previos; no acredita aceptación. Se conserva verificación fail-closed y necesidad de red inicial sin motor verificado en caché; smoke de runtime empaquetado pendiente.
 
 ## Unreleased — Quality Gates ejecutables
 

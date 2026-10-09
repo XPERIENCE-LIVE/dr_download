@@ -11,7 +11,8 @@ await mkdir(outputDir, { recursive: true });
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
 async function findPage() {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  const deadline = Date.now() + 150000;
+  while (Date.now() < deadline) {
     try {
       const targets = await fetch(`http://127.0.0.1:${port}/json/list`, { signal: AbortSignal.timeout(2000) }).then((response) => response.json());
       const page = targets.find((target) => target.type === "page" && target.webSocketDebuggerUrl);

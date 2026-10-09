@@ -1,5 +1,25 @@
 const { buildApiRequest } = require("./ipc-contract");
 
+async function waitForBackend(baseUrl, sessionToken, child) {
+  let lastError;
+  // First startup downloads and verifies the engine before health is available.
+  const deadline = Date.now() + 120000;
+  while (Date.now() < deadline) {
+    if (child.exitCode !== null || child.signalCode !== null) throw new Error("Backend exited before becoming ready");
+    try {
+      const response = await fetch(`${baseUrl}/health`, {
+        headers: { "X-Dr-Download-Token": sessionToken },
+        signal: AbortSignal.timeout(Math.min(2000, deadline - Date.now()))
+      });
+      if (response.ok) return;
+    } catch (error) {
+      lastError = error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`Backend did not start in time${lastError ? `: ${lastError.name}` : ""}`);
+}
+
 async function requestBackend(baseUrl, sessionToken, operation, args) {
   const request = buildApiRequest(operation, args);
   const response = await fetch(`${baseUrl}${request.path}`, {
@@ -23,4 +43,4 @@ async function requestBackend(baseUrl, sessionToken, operation, args) {
   return payload;
 }
 
-module.exports = { requestBackend };
+module.exports = { requestBackend, waitForBackend };

@@ -4,7 +4,7 @@ const fs = require("fs");
 const net = require("net");
 const path = require("path");
 const { spawn } = require("child_process");
-const { requestBackend: sendBackendRequest } = require("./backend-client");
+const { requestBackend: sendBackendRequest, waitForBackend } = require("./backend-client");
 const { resolveDownloadTarget, sanitizeNotification } = require("./file-actions");
 const { configureAppUpdater } = require("./app-updater");
 const { resolveFfmpegDirectory, resolveNodeExecutable } = require("./runtime-paths");
@@ -28,22 +28,6 @@ function findFreePort() {
   });
 }
 
-async function waitForBackend() {
-  let lastError;
-  for (let attempt = 0; attempt < 60; attempt += 1) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${backendPort}/health`, {
-        headers: { "X-Dr-Download-Token": sessionToken }
-      });
-      if (response.ok) return;
-    } catch (error) {
-      lastError = error;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  throw new Error(`Backend did not start in time${lastError ? `: ${lastError.name}` : ""}`);
-}
-
 async function startBackend() {
   backendPort = await findFreePort();
   sessionToken = crypto.randomBytes(32).toString("hex");
@@ -63,7 +47,7 @@ async function startBackend() {
     stdio: app.isPackaged ? "ignore" : "inherit"
   });
   backendProcess.once("exit", () => { backendProcess = null; });
-  await waitForBackend();
+  await waitForBackend(`http://127.0.0.1:${backendPort}`, sessionToken, backendProcess);
 }
 
 async function requestBackend(operation, args) {

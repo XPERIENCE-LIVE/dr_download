@@ -13,6 +13,7 @@
 |---|---|---|---|
 | Carpeta inválida | `DirectoryCheck` negativo | bloquear cola | usar Descargas o elegir otra |
 | Backend detenido | timeout/connection refused | marcar motor no disponible | reiniciar backend y reintentar |
+| Primer arranque lento | salud autenticada pendiente mientras el proceso sigue vivo | esperar hasta 120 s transcurridos, con timeout de 2 s por petición; rechazar antes si el proceso termina | comprobar red inicial y reintentar; exportar diagnóstico si persiste |
 | yt-dlp/FFmpeg termina | exit code y estado | `failed`, conservar diagnóstico redactado | reintentar sin duplicar |
 | Cancelación | señal y `wait()` | matar árbol de procesos, limpiar temporal | estado `cancelled` |
 | SQLite corrupto | error de apertura | fallar cerrado, conservar archivo original sin reemplazarlo por historial vacío | exportar diagnóstico y restaurar un backup válido con revisión |
@@ -35,3 +36,7 @@
 8. La advertencia de repetición permite continuar y no elimina protección contra colisiones; filtrado local no modifica registros ni archivos.
 
 Los errores y acciones se traducen por código conforme a [copy ES/EN](../design/error-copy.md); [experiencia confiable](../product/experience-reliability.md) define conservación de enlace, borrador, ID y datos durante recuperación.
+
+El helper existente `waitForBackend`, compartido desde `backend-client.js`, mantiene `/health` autenticado y la verificación fail-closed del motor antes de declarar servicio disponible. En un perfil nuevo, el primer arranque observado tardó 26,68 s (aproximadamente 27 s): es un diagnóstico que explica por qué el límite previo de 15 s impedía cargar el renderer, no evidencia de aceptación ni garantía de latencia. Sin motor previamente verificado en caché, el primer arranque todavía necesita red para obtenerlo y verificarlo; el límite de 120 s no habilita un motor alternativo ni convierte fallo en éxito.
+
+Regresión aislada: `backend-startup.test.js` contiene `waits for a healthy first startup that takes longer than fifteen seconds`, `stops waiting as soon as the backend process exits` y `rejects an unready backend after the bounded startup deadline`. El smoke del runtime empaquetado sigue pendiente de ejecución y evidencia; estos tests no lo sustituyen.

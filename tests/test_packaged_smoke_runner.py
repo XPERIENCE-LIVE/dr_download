@@ -1,3 +1,5 @@
+import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -6,6 +8,7 @@ import pytest
 
 
 RUNNER = Path(__file__).resolve().parents[1] / "electron/scripts/run-packaged-ui-smoke.ps1"
+SMOKE = RUNNER.with_name("packaged-ui-smoke.mjs")
 POWERSHELL = shutil.which("powershell")
 pytestmark = pytest.mark.skipif(not POWERSHELL, reason="Windows packaged smoke uses PowerShell")
 
@@ -82,3 +85,32 @@ if ($env:ELECTRON_RUN_AS_NODE -ne '1') {{ throw 'Launcher changed the parent env
 """)
     assert result.returncode == 0, result.stderr
     assert output.read_text(encoding="utf-8") == "False"
+
+
+def test_renderer_discovery_allows_fresh_engine_startup_but_stops_at_its_deadline():
+    # Synthetic time checks the polling budget; this is not packaged acceptance.
+    source = re.search(r"async function findPage\(\) \{.*?\n\}", SMOKE.read_text(encoding="utf-8"), re.S).group()
+    code = f"""const assert = require('node:assert/strict');
+const http = require('node:http');
+let clock = 0;
+let requests = 0;
+const server = http.createServer((request, response) => {{
+  requests += 1;
+  response.setHeader('Content-Type', 'application/json');
+  response.end('[]');
+}});
+server.listen(0, '127.0.0.1', async () => {{
+  const AsyncFunction = Object.getPrototypeOf(async () => {{}}).constructor;
+  const discover = new AsyncFunction('port', 'delay', 'fetch', 'Date', 'AbortSignal', {json.dumps(source)} + '; return findPage();');
+  try {{
+    await assert.rejects(discover(server.address().port,
+      async (milliseconds) => {{ clock += milliseconds; }},
+      async (url, options) => {{ clock += 1000; return fetch(url, options); }},
+      {{ now: () => clock }}, AbortSignal), /did not expose a debuggable renderer/);
+    assert(clock >= 150000 && clock <= 152500, `Discovery ended at ${{clock}}ms`);
+    assert(requests > 60 && requests <= 101, `Unbounded requests: ${{requests}}`);
+  }} finally {{ server.closeAllConnections(); server.close(); }}
+}});
+"""
+    result = subprocess.run([shutil.which("node"), "-e", code], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
