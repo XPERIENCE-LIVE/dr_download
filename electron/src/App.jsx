@@ -4,7 +4,7 @@ import "./styles/main.css";
 
 const ACTIVE = new Set(["queued", "inspecting", "downloading", "postprocessing"]);
 const defaultConfig = {
-  language: "es", cookie_source: "edge", cookie_consent: false, notifications: true,
+  theme: "dark", language: "es", cookie_source: "edge", cookie_consent: false, notifications: true,
   output_dir: "", default_format: "video"
 };
 
@@ -14,8 +14,10 @@ export function findNewCompletions(previous, current) {
 
 function formatDuration(seconds) {
   if (!Number.isFinite(seconds)) return "—";
-  const minutes = Math.floor(seconds / 60);
-  return `${minutes}:${String(seconds % 60).padStart(2, "0")}`;
+  const total = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor(total / 60) % 60;
+  return `${hours ? `${hours}:${String(minutes).padStart(2, "0")}` : Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
 function formatBytes(value) {
@@ -36,25 +38,60 @@ function Icon({ name }) {
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d={paths[name]} /></svg>;
 }
 
-function SignalLine({ progress = 0, status = "queued" }) {
+function errorDetails(reason, t) {
+  const detail = reason?.detail || reason || {};
+  const code = detail.code || detail.error_code || detail.error;
+  const messageKey = `error_${code}`;
+  const recoveryKey = `recovery_${code}`;
+  const sessionError = ["age_restricted", "session_required", "browser_locked"].includes(code);
+  return {
+    code,
+    message: t(messageKey) !== messageKey ? t(messageKey) : code ? t("error_engine_error") : detail.message || reason?.message || (typeof detail === "string" ? detail : t("unknownError")),
+    recovery: sessionError ? t("sessionRecovery") : t(recoveryKey) !== recoveryKey ? t(recoveryKey) : code ? t("recovery_engine_error") : detail.recovery || t("unknownError")
+  };
+}
+
+function ErrorNotice({ reason, t, children }) {
+  if (!reason) return null;
+  const detail = errorDetails(reason, t);
+  return <div className="error-card" role="alert"><strong>{t("errorTitle")}</strong><span>{detail.message}</span><span>{detail.recovery}</span>{children}</div>;
+}
+
+function SignalLine({ progress, status = "queued", label }) {
+  const measured = Number.isFinite(progress);
+  const value = measured ? Math.min(100, Math.max(0, progress)) : 0;
   return (
-    <div className={`signal-line signal-${status}`} aria-label={`${progress}%`}>
-      <span style={{ width: `${Math.max(3, progress)}%` }} />
-      <i style={{ left: `${Math.min(98, Math.max(2, progress))}%` }} />
+    <div className={`signal-line signal-${status}${measured ? "" : " indeterminate"}`} role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={measured ? value : undefined}>
+      <span style={measured ? { width: `${value}%` } : undefined} />
+      {measured && <i style={{ left: `${Math.min(98, value)}%` }} />}
     </div>
   );
 }
 
-function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck, downloads, setDownloads, t }) {
+function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck, downloads, setDownloads, setView, requestedUrl, configLoaded, t }) {
   const [url, setUrl] = useState("");
   const [media, setMedia] = useState(null);
   const [formatId, setFormatId] = useState("video-best");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState(null);
   const [justQueued, setJustQueued] = useState(false);
+  const [advanced, setAdvanced] = useState(false);
+  const currentConfig = useRef(config);
+  currentConfig.current = config;
+  const inspectionRevision = useRef(0);
+  useEffect(() => {
+    if (!requestedUrl) return;
+    inspectionRevision.current += 1;
+    setUrl(requestedUrl.url); setMedia(null); setError(null); setJustQueued(false);
+  }, [requestedUrl]);
+  const selected = media?.formats.find((item) => item.id === formatId);
+  const estimate = Number.isSafeInteger(selected?.estimated_bytes) && selected.estimated_bytes > 0 ? selected.estimated_bytes : null;
+  const requiredSpace = Math.max(128 * 1024 * 1024, (estimate || 0) * 2);
+  const insufficientSpace = Number.isFinite(directoryCheck?.free_bytes) && directoryCheck.free_bytes < requiredSpace;
+  const duplicate = downloads.some((item) => item.url === url.trim());
+  const formats = media?.formats.filter((item) => advanced || ["video-compatible", "video-best", "audio-mp3"].includes(item.id)) || [];
 
   const validateDirectory = async (path = config.output_dir) => {
-    if (!api?.validateDirectory) return { accepted: Boolean(path), valid: Boolean(path), path };
     const result = await api.validateDirectory({ path: path || "" });
     setDirectoryCheck(result);
     if (result.accepted && result.path && result.path !== config.output_dir) {
@@ -65,125 +102,193 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
 
   const inspect = async () => {
     if (busy || !url.trim()) return;
-    setBusy(true); setError(""); setMedia(null); setJustQueued(false);
+    const revision = ++inspectionRevision.current;
+    setBusy("inspecting"); setError(null); setMedia(null); setJustQueued(false);
     try {
       const result = await api.inspectMedia({
         url: url.trim(),
         cookie_source: config.cookie_consent ? config.cookie_source : "none"
       });
+      if (revision !== inspectionRevision.current) return;
       setMedia(result);
       await validateDirectory();
-      const preferred = result.formats.find((item) => item.kind === config.default_format) || result.formats[0];
+      const preferred = result.formats.find((item) => item.kind === config.default_format && ["video-compatible", "video-best", "audio-mp3"].includes(item.id));
       if (preferred) setFormatId(preferred.id);
     } catch (reason) {
-      setError(reason?.detail?.message || reason?.message || t("unknownError"));
-    } finally { setBusy(false); }
+      if (revision === inspectionRevision.current) setError(reason);
+    } finally { setBusy(""); }
   };
 
   const chooseFolder = async () => {
-    const folder = await api.selectFolder();
-    if (folder) {
-      setConfig((current) => ({ ...current, output_dir: folder }));
-      await validateDirectory(folder);
-    }
+    if (busy) return;
+    setBusy("folder"); setError(null);
+    try {
+      const folder = await api.selectFolder();
+      if (folder) await validateDirectory(folder);
+    } catch (reason) { setError(reason); }
+    finally { setBusy(""); }
+  };
+
+  const useDownloads = async () => {
+    if (busy) return;
+    setBusy("folder"); setError(null);
+    try { await validateDirectory(""); }
+    catch (reason) { setError(reason); }
+    finally { setBusy(""); }
   };
 
   const enqueue = async () => {
     if (busy || !media) return;
-    setBusy(true); setError("");
+    setBusy("queueing"); setError(null);
     try {
       const checked = await validateDirectory();
       if (!checked.accepted) {
-        setError(checked.recovery || t("folderInvalid"));
+        setError(checked);
+        return;
+      }
+      if (Number.isFinite(checked.free_bytes) && checked.free_bytes < requiredSpace) {
+        setError({ code: "disk_full" });
         return;
       }
       const task = await api.createDownload({
-        url: url.trim(), format_id: formatId, output_dir: config.output_dir,
-        cookie_source: config.cookie_consent ? config.cookie_source : "none"
+        url: url.trim(), format_id: formatId, output_dir: checked.path,
+        cookie_source: currentConfig.current.cookie_consent ? currentConfig.current.cookie_source : "none",
+        ...(estimate ? { estimated_bytes: estimate } : {})
       });
       setDownloads((current) => [task, ...current.filter((item) => item.id !== task.id)]);
       setJustQueued(true);
     } catch (reason) {
-      setError(reason?.detail?.message || reason?.message || t("unknownError"));
-    } finally { setBusy(false); }
+      setError(reason);
+    } finally { setBusy(""); }
   };
 
   return <section className="workspace deck-workspace" aria-labelledby="new-title">
     <div className="new-deck">
       <section className="capture-deck panel">
-        <header className="workspace-header"><div><p className="eyebrow">INPUT CHANNEL / 01</p><h1 id="new-title">{t("new")}</h1><p>{t("pasteHint")}</p></div><span className="status-chip"><b />{t("ready")}</span></header>
+        <header className="workspace-header"><div><p className="eyebrow">{t("input")}</p><h1 id="new-title">{t("new")}</h1><p>{t("pasteHint")}</p></div><span className="status-chip">{busy === "inspecting" ? t("inspecting") : media ? t("inspected") : t("ready")}</span></header>
         <div className="composer">
           <label htmlFor="media-url">{t("url")}</label>
-          <div className="url-row"><input id="media-url" type="url" value={url} disabled={busy} onChange={(event) => { setUrl(event.target.value); setMedia(null); setJustQueued(false); setError(""); }} onKeyDown={(event) => event.key === "Enter" && inspect()} placeholder="https://youtu.be/…" /><button className="primary" onClick={inspect} disabled={busy || !url.trim()}>{busy ? t("inspecting") : t("inspect")}</button></div>
-          <div className="track-labels"><span>ENLACE</span><span>INSPECCIÓN</span><span>FORMATO</span><span>COLA</span></div>
-          <SignalLine progress={busy ? 42 : media ? 100 : 0} status={busy ? "inspecting" : media ? "completed" : "queued"} />
+          <div className="url-row"><input id="media-url" type="url" value={url} disabled={Boolean(busy) || !configLoaded} onChange={(event) => { setUrl(event.target.value); setMedia(null); setJustQueued(false); setError(null); }} onKeyDown={(event) => event.key === "Enter" && inspect()} placeholder="https://youtu.be/…" /><button className="primary" onClick={inspect} disabled={Boolean(busy) || !configLoaded || !url.trim()}>{busy === "inspecting" ? t("inspecting") : t("inspect")}</button></div>
+          <div className="track-labels"><span>{t("input")}</span><span>{t("inspection")}</span><span>{t("format")}</span><span>{t("queue")}</span></div>
+          {(busy === "inspecting" || busy === "queueing") && <SignalLine status={busy} label={t(busy)} />}
+          {duplicate && <p className="warning" role="status">{t("duplicate")}</p>}
         </div>
-        {error && <div className="error-card" role="alert"><strong>{t("errorTitle")}</strong><span>{error}</span></div>}
+        <ErrorNotice reason={error} t={t}><div className="card-actions"><button className="secondary" disabled={Boolean(busy)} onClick={inspect}>{t("reinspect")}</button><button className="secondary" onClick={() => setView("settings")}>{t("settings")}</button></div></ErrorNotice>
         {media && <article className="media-summary">
           <div className="media-thumb">{media.thumbnail ? <img src={media.thumbnail} alt="" /> : <span>DD</span>}<div className="duration">{formatDuration(media.duration)}</div></div>
-          <div className="media-info"><p className="eyebrow">SIGNAL LOCKED</p><h2>{media.title}</h2><p>{media.author}</p></div>
+          <div className="media-info"><p className="eyebrow">{t("inspected")}</p><h2>{media.title}</h2><p>{media.author}</p></div>
         </article>}
       </section>
       <aside className="output-patch panel">
-        <p className="eyebrow">OUTPUT PATCH</p><h2>{config.language === "es" ? "Preparar transferencia" : "Prepare transfer"}</h2>
-        {media ? <><div className="media-controls"><label>{t("format")}<select value={formatId} onChange={(event) => setFormatId(event.target.value)}>{media.formats.map((item) => <option key={item.id} value={item.id}>{item.label}{item.container ? ` · ${item.container.toUpperCase()}` : ""}</option>)}</select></label>
-          <label>{t("folder")}<div className="folder-control"><input title={directoryCheck?.path || config.output_dir} value={directoryCheck?.path || config.output_dir || t("folderInvalid")} readOnly /><button className="secondary" onClick={chooseFolder}>{t("choose")}</button></div></label></div>
-          {directoryCheck && !directoryCheck.accepted && <div className="error-card directory-error" role="alert"><strong>{t("folderInvalid")}</strong><span>{directoryCheck.recovery || t("folderInvalid")}</span><button className="secondary" onClick={() => validateDirectory("")}>{t("useDownloads")}</button></div>}
+        <p className="eyebrow">{t("output")}</p><h2>{t("prepare")}</h2>
+        {media ? <><div className="media-controls"><label>{t("format")}<select value={formatId} disabled={Boolean(busy)} onChange={(event) => setFormatId(event.target.value)}>{formats.map((item) => <option key={item.id} value={item.id}>{t(item.id) !== item.id ? t(item.id) : item.label}{item.container ? ` · ${item.container.toUpperCase()}` : ""}</option>)}</select></label>
+          <label className="advanced-control"><input type="checkbox" checked={advanced} disabled={Boolean(busy)} onChange={(event) => { setAdvanced(event.target.checked); if (!event.target.checked && !["video-compatible", "video-best", "audio-mp3"].includes(formatId)) setFormatId(media.formats.find((item) => ["video-compatible", "video-best", "audio-mp3"].includes(item.id) && item.kind === selected?.kind)?.id || "video-best"); }} />{t("advanced")}</label>
+          <p className="size-estimate">{estimate ? `${t("estimatedSize")}: ${formatBytes(estimate)}` : t("unknownSize")}</p>
+          {estimate && <p className="estimate-hint">{t("estimateHint")}</p>}
+            {formatId === "video-best" && <p className="estimate-hint">{t("qualityHint")}</p>}
+          {Number.isFinite(directoryCheck?.free_bytes) && <p className="size-estimate">{t("freeSpace")}: {formatBytes(directoryCheck.free_bytes)}</p>}
+          <label>{t("folder")}<div className="folder-control"><input title={directoryCheck?.path || config.output_dir} value={directoryCheck?.path || config.output_dir || t("folderInvalid")} readOnly /><button className="secondary" disabled={Boolean(busy)} onClick={chooseFolder}>{t("choose")}</button></div></label></div>
+          {directoryCheck && (!directoryCheck.accepted || insufficientSpace) && <div className="error-card directory-error" role="alert"><strong>{insufficientSpace ? t("insufficientSpace") : t("folderInvalid")}</strong><span>{insufficientSpace ? t("recovery_disk_full") : errorDetails(directoryCheck, t).recovery}</span><button className="secondary" disabled={Boolean(busy)} onClick={useDownloads}>{t("useDownloads")}</button></div>}
           {directoryCheck?.accepted && <p className="directory-ready" role="status">{t("folderReady")}</p>}
-          <button className="primary queue-button" onClick={enqueue} disabled={busy || !directoryCheck?.accepted}>{t("add")}</button></> : <div className="patch-empty"><span>01</span><p>{config.language === "es" ? "Inspecciona una señal para configurar su salida." : "Inspect a signal to configure its output."}</p></div>}
+          <button className="primary queue-button" onClick={enqueue} disabled={Boolean(busy) || !directoryCheck?.accepted || insufficientSpace || !selected}>{busy === "queueing" ? t("queueing") : t("add")}</button></> : <div className="patch-empty"><span aria-hidden="true">01</span><p>{t("inspectFirst")}</p></div>}
       </aside>
     </div>
-    {(justQueued || downloads.some((item) => item.status === "queued")) && <div className="toast" role="status">{t("queued")}</div>}
+    {justQueued && <div className="queue-confirmation" role="status">{t("queued")} <button className="secondary" onClick={() => setView("queue")}>{t("viewQueue")}</button></div>}
     <p className="legal-note">{t("legal")}</p>
   </section>;
 }
 
-function DownloadCard({ item, api, refresh, t }) {
-  const action = async (name) => { await api[name](item.id); await refresh(); };
+function DownloadCard({ item, api, refresh, setView, inspectAgain, t }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const action = async (name, ...args) => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      await api[name](...args);
+      if (["cancelDownload", "retryDownload", "deleteDownload"].includes(name)) await refresh();
+    } catch (reason) { setError(reason); }
+    finally { setBusy(false); }
+  };
+  const taskError = item.error && errorDetails(item.error, t);
   return <article className="download-card panel">
-    <div className="download-top"><div><span className={`state state-${item.status}`}>{t(item.status)}</span><h3>{item.title || item.filename || item.url || item.id}</h3></div><strong className="percent">{Math.round(item.progress || 0)}%</strong></div>
-    <SignalLine progress={item.progress || 0} status={item.status} />
-    <dl className="telemetry"><div><dt>{t("speed")}</dt><dd>{item.speed_bps ? `${formatBytes(item.speed_bps)}/s` : "—"}</dd></div><div><dt>{t("eta")}</dt><dd>{item.eta_seconds ? `${item.eta_seconds}s` : "—"}</dd></div><div><dt>{t("size")}</dt><dd>{formatBytes(item.bytes_downloaded)}</dd></div></dl>
-    {item.error && <p className="inline-error">{item.error.message} {item.error.recovery}</p>}
+    <div className="download-top"><div><span className={`state state-${item.status}`}>{t(item.status)}</span><h3>{item.title || item.filename || item.url || item.id}</h3></div>{["downloading", "completed"].includes(item.status) && <strong className="percent">{Math.round(item.progress || 0)}%</strong>}</div>
+    <SignalLine progress={["inspecting", "postprocessing"].includes(item.status) ? undefined : item.progress || 0} status={item.status} label={t(item.status)} />
+    <dl className="telemetry"><div><dt>{t("speed")}</dt><dd>{item.speed_bps ? `${formatBytes(item.speed_bps)}/s` : "—"}</dd></div><div><dt>{t("eta")}</dt><dd>{Number.isFinite(item.eta_seconds) ? formatDuration(item.eta_seconds) : "—"}</dd></div><div><dt>{t("size")}</dt><dd>{formatBytes(item.bytes_downloaded)}</dd></div></dl>
+    {taskError && <p className="inline-error">{taskError.message} {taskError.recovery}</p>}
+    <ErrorNotice reason={error} t={t} />
     <div className="card-actions">
-      {ACTIVE.has(item.status) && <button className="danger" onClick={() => action("cancelDownload")}>{t("cancel")}</button>}
-      {["failed", "cancelled", "error"].includes(item.status) && <button onClick={() => action("retryDownload")}>{t("retry")}</button>}
-      {item.filename && <button onClick={() => api.openDownload(item.id, "file")}>{t("openFile")}</button>}
-      {item.output_dir && <button onClick={() => api.openDownload(item.id, "folder")}>{t("openFolder")}</button>}
-      {!ACTIVE.has(item.status) && <button onClick={() => action("deleteDownload")}>{t("remove")}</button>}
+      {ACTIVE.has(item.status) && <button disabled={busy} className="danger" onClick={() => action("cancelDownload", item.id)}>{t("cancel")}</button>}
+      {["failed", "cancelled", "error"].includes(item.status) && <button disabled={busy} onClick={() => action("retryDownload", item.id)}>{t("retry")}</button>}
+      {item.error?.code === "format_unavailable" && <button onClick={() => inspectAgain(item.url)}>{t("reinspect")}</button>}
+      {taskError && <button onClick={() => setView("settings")}>{t("settings")}</button>}
+      {item.filename && <button disabled={busy} onClick={() => action("openDownload", item.id, "file")}>{t("openFile")}</button>}
+      {item.output_dir && <button disabled={busy} onClick={() => action("openDownload", item.id, "folder")}>{t("openFolder")}</button>}
+      {!ACTIVE.has(item.status) && <button disabled={busy} onClick={() => action("deleteDownload", item.id)}>{t("remove")}</button>}
     </div>
   </article>;
 }
 
-function DownloadsView({ mode, downloads, api, refresh, t }) {
-  const items = downloads.filter((item) => mode === "queue" ? ACTIVE.has(item.status) : !ACTIVE.has(item.status));
-  return <section className="workspace"><header className="workspace-header"><div><p className="eyebrow">{mode === "queue" ? "OUTPUT / LIVE" : "ARCHIVE / LOCAL"}</p><h1>{t(mode)}</h1><p>{items.length} · Dr. Download</p></div></header>
-    <div className="download-list">{items.map((item) => <DownloadCard key={item.id} item={item} api={api} refresh={refresh} t={t} />)}{!items.length && <div className="empty panel"><span className="empty-mark">∿</span><p>{t(mode === "queue" ? "emptyQueue" : "emptyHistory")}</p></div>}</div>
+function DownloadsView({ mode, downloads, api, refresh, setView, inspectAgain, t }) {
+  const [search, setSearch] = useState("");
+  const [state, setState] = useState("all");
+  const items = downloads.filter((item) => mode === "queue" ? ACTIVE.has(item.status) : !ACTIVE.has(item.status)
+    && (state === "all" || item.status === state)
+    && [item.title, item.url, item.filename].some((value) => (value || "").toLocaleLowerCase().includes(search.trim().toLocaleLowerCase())));
+  return <section className="workspace"><header className="workspace-header"><div><p className="eyebrow">{t(mode === "queue" ? "queue" : "localData")}</p><h1>{t(mode)}</h1><p>{items.length} · Dr. Download</p></div></header>
+    {mode === "history" && <div className="history-controls"><label>{t("searchHistory")}<input type="search" value={search} onChange={(event) => setSearch(event.target.value)} /></label><label>{t("state")}<select value={state} onChange={(event) => setState(event.target.value)}>{["all", "completed", "failed", "cancelled"].map((value) => <option key={value} value={value}>{t(value === "all" ? "allStates" : value)}</option>)}</select></label></div>}
+    <div className="download-list">{items.map((item) => <DownloadCard key={item.id} item={item} api={api} refresh={refresh} setView={setView} inspectAgain={inspectAgain} t={t} />)}{!items.length && <div className="empty panel"><span className="empty-mark" aria-hidden="true">∿</span><p>{t(mode === "queue" ? "emptyQueue" : search || state !== "all" ? "noMatches" : "emptyHistory")}</p></div>}</div>
   </section>;
 }
 
-function Settings({ config, setConfig, api, t }) {
-  const update = (key, value) => setConfig((current) => ({ ...current, [key]: value }));
-  const save = () => api.updateConfig(config);
-  return <section className="workspace"><header className="workspace-header"><div><p className="eyebrow">SYSTEM / LOCAL</p><h1>{t("settings")}</h1></div></header><div className="settings-grid panel">
-    <label>{t("language")}<select value={config.language} onChange={(event) => update("language", event.target.value)}><option value="es">Español</option><option value="en">English</option></select></label>
-    <label>{t("browser")}<select value={config.cookie_source} onChange={(event) => update("cookie_source", event.target.value)}><option value="edge">Microsoft Edge</option><option value="firefox">Mozilla Firefox</option><option value="none">{config.language === "es" ? "Sin cookies" : "No cookies"}</option></select></label>
-    <label className="toggle"><input type="checkbox" checked={config.notifications} onChange={(event) => update("notifications", event.target.checked)} /><span />{t("notifications")}</label>
-    <button className="primary" onClick={save}>{t("save")}</button>
-    <button onClick={() => api.exportDiagnostics()}>{t("exportDiagnostics")}</button>
-  </div></section>;
+function Settings({ config, setConfig, api, externalBusy, onBusyChange, t }) {
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState("");
+  const disabled = Boolean(busy) || externalBusy;
+  const update = (key, value) => {
+    setSuccess("");
+    setConfig((current) => ({ ...current, [key]: value,
+      ...(key === "cookie_source" && value !== current.cookie_source ? { cookie_consent: false } : {}) }));
+  };
+  const save = async (revoke = false) => {
+    if (disabled) return;
+    onBusyChange(true);
+    setBusy("saving"); setError(null); setSuccess("");
+    const next = revoke ? { ...config, cookie_consent: false } : config;
+    // Revocation stops reads immediately even if saving the preference fails.
+    if (revoke) setConfig(next);
+    try { await api.updateConfig(next); setSuccess(revoke ? "consentRevoked" : "saved"); }
+    catch (reason) { setError(reason); }
+    finally { setBusy(""); onBusyChange(false); }
+  };
+  const exportDiagnostics = async () => {
+    if (disabled) return;
+    setBusy("exporting"); setError(null); setSuccess("");
+    try { if (await api.exportDiagnostics()) setSuccess("exported"); }
+    catch (reason) { setError(reason); }
+    finally { setBusy(""); }
+  };
+  return <section className="workspace"><header className="workspace-header"><div><p className="eyebrow">{t("localData")}</p><h1>{t("settings")}</h1></div></header><div className="settings-grid panel">
+    <label>{t("language")}<select disabled={disabled} value={config.language} onChange={(event) => update("language", event.target.value)}><option value="es">Español</option><option value="en">English</option></select></label>
+    <label>{t("browser")}<select disabled={disabled} value={config.cookie_source} onChange={(event) => update("cookie_source", event.target.value)}><option value="edge">Microsoft Edge</option><option value="firefox">Mozilla Firefox</option><option value="none">{t("noCookies")}</option></select></label>
+    <label className="toggle"><input disabled={disabled} type="checkbox" checked={config.notifications} onChange={(event) => update("notifications", event.target.checked)} /><span />{t("notifications")}</label>
+    <button disabled={disabled} className="primary" onClick={() => save()}>{t(busy === "saving" ? "saving" : "save")}</button>
+    <button disabled={disabled} onClick={exportDiagnostics}>{t(busy === "exporting" ? "exporting" : "exportDiagnostics")}</button>
+    {config.cookie_consent && <button disabled={disabled} onClick={() => save(true)}>{t("revokeConsent")}</button>}
+  </div><ErrorNotice reason={error} t={t} />{success && <p role="status">{t(success)}</p>}</section>;
 }
 
 function About({ t }) {
-  return <section className="workspace"><header className="workspace-header"><div><p className="eyebrow">DR / DOWNLOAD</p><h1>{t("about")}</h1></div></header><div className="about-card panel"><div className="brand-monogram large">D<span>↓</span></div><h2>Dr. Download</h2><p>{t("aboutCopy")}</p><dl><div><dt>{t("version")}</dt><dd>2.1.0</dd></div><div><dt>Motor</dt><dd>yt-dlp</dd></div><div><dt>Datos</dt><dd>100% local</dd></div></dl><p className="legal-note">{t("legal")}</p></div></section>;
+  return <section className="workspace"><header className="workspace-header"><div><p className="eyebrow">Dr. Download</p><h1>{t("about")}</h1></div></header><div className="about-card panel"><div className="brand-monogram large">D<span>↓</span></div><h2>Dr. Download</h2><p>{t("aboutCopy")}</p><dl><div><dt>{t("version")}</dt><dd>2.1.0</dd></div><div><dt>{t("engine")}</dt><dd>yt-dlp</dd></div><div><dt>{t("data")}</dt><dd>{t("localOnly")}</dd></div></dl><p className="legal-note">{t("legal")}</p></div></section>;
 }
 
-function TransferStrip({ item, language }) {
+function TransferStrip({ item, t }) {
   if (!item) return null;
   return <footer className="transfer-strip" aria-live="polite">
-    <div className="transfer-now"><strong>{language === "es" ? "TRANSFERENCIA ACTIVA" : "ACTIVE TRANSFER"}</strong><span>{item.title || item.filename || item.id}</span></div>
-    <div className="transfer-progress"><SignalLine progress={item.progress || 0} status={item.status} /><div className="transfer-metrics"><span>{Math.round(item.progress || 0)}%</span><span>{item.speed_bps ? `${formatBytes(item.speed_bps)}/s` : "—"}</span><span>{item.eta_seconds ? `${item.eta_seconds}s` : "—"}</span></div></div>
-    <span className="engine-state">{item.status === "postprocessing" ? (language === "es" ? "PROCESANDO" : "PROCESSING") : (language === "es" ? "DESCARGANDO" : "DOWNLOADING")}</span>
+    <div className="transfer-now"><strong>{t(item.status === "queued" ? "transferWaiting" : "transferActive")}</strong><span>{item.title || item.filename || item.id}</span></div>
+    <div className="transfer-progress"><SignalLine progress={["inspecting", "postprocessing"].includes(item.status) ? undefined : item.progress || 0} status={item.status} label={t(item.status)} /><div className="transfer-metrics"><span>{item.status === "downloading" ? `${Math.round(item.progress || 0)}%` : t(item.status)}</span><span>{item.speed_bps ? `${formatBytes(item.speed_bps)}/s` : "—"}</span><span>{Number.isFinite(item.eta_seconds) ? formatDuration(item.eta_seconds) : "—"}</span></div></div>
+    <span className="engine-state">{t(item.status)}</span>
   </footer>;
 }
 
@@ -195,6 +300,12 @@ export default function App() {
   const [directoryCheck, setDirectoryCheck] = useState(null);
   const [loadError, setLoadError] = useState("");
   const [configError, setConfigError] = useState("");
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [consentBusy, setConsentBusy] = useState(false);
+  const [consentError, setConsentError] = useState(null);
+  const [settingsBusy, setSettingsBusy] = useState(false);
+  const [requestedUrl, setRequestedUrl] = useState(null);
   const previousStatuses = useRef({});
   const downloadsLoaded = useRef(false);
   const mounted = useRef(false);
@@ -210,6 +321,7 @@ export default function App() {
     inFlight.current = api.listDownloads().then((items) => {
       if (mounted.current) {
         if (!downloadsLoaded.current) {
+          setHistoryLoaded(true);
           previousStatuses.current = { ...Object.fromEntries(items.map((item) => [item.id, item.status])), ...previousStatuses.current };
           downloadsLoaded.current = true;
         }
@@ -231,7 +343,7 @@ export default function App() {
         const message = reason?.detail?.message || reason?.message || t("unknownError");
         if (message !== lastLoadError.current) {
           lastLoadError.current = message;
-          setLoadError(message);
+          setLoadError(reason);
         }
       }
       throw reason;
@@ -249,16 +361,17 @@ export default function App() {
   }, [refresh]);
   const activeDownloads = useMemo(() => downloads.filter((item) => ACTIVE.has(item.status)), [downloads]);
   const hasActiveDownloads = activeDownloads.length > 0;
+  const loadConfiguration = useCallback(async () => {
+    try {
+      const saved = await api.getConfig();
+      if (mounted.current) { setConfig({ ...defaultConfig, ...saved }); setConfigLoaded(true); setConfigError(""); }
+    } catch (reason) { if (mounted.current) setConfigError(reason); }
+  }, [api]);
 
   useEffect(() => {
     if (!api) return;
     mounted.current = true;
-    api.getConfig().then((saved) => {
-      if (!mounted.current) return;
-      setConfig({ ...defaultConfig, ...saved });
-    }).catch((reason) => {
-      if (mounted.current) setConfigError(reason?.detail?.message || reason?.message || String(reason));
-    });
+    loadConfiguration();
     refresh().catch(() => {}); // refresh exposes failures in the interface.
     return () => { mounted.current = false; };
     // Configuration is loaded once for each bridge, independently of language changes.
@@ -301,12 +414,27 @@ export default function App() {
   }, [api, refresh, hasActiveDownloads]);
 
   const nav = ["new", "queue", "history", "settings", "about"];
-  const activeTransfer = activeDownloads[0];
+  const activeTransfer = activeDownloads.find((item) => item.status !== "queued") || activeDownloads[0];
   const appError = configError || loadError;
+  const connection = !api || appError ? "engineUnavailable" : configLoaded && historyLoaded ? "engineReady" : "connecting";
+  const inspectAgain = (url) => { setRequestedUrl({ url: url || "" }); setView("new"); };
+  const allowCookies = async () => {
+    if (consentBusy || settingsBusy) return;
+    setConsentBusy(true); setConsentError(null);
+    const next = { ...config, cookie_consent: true };
+    try {
+      await api.updateConfig(next);
+      setConfig((current) => ({ ...current, cookie_consent: current.cookie_source === next.cookie_source }));
+    } catch (reason) { setConsentError(reason); }
+    finally { setConsentBusy(false); }
+  };
   return <div className={`app-shell${activeTransfer ? " has-transfer" : ""}`}>
-    <header className="deck-topbar"><div className="brand"><div className="brand-monogram">D<span>↓</span></div><div><strong>Dr. Download</strong><small>MEDIA SIGNAL</small></div></div><nav aria-label="Principal">{nav.map((name) => <button key={name} className={view === name ? "active" : ""} onClick={() => setView(name)}><Icon name={name} /><span>{t(name)}</span>{name === "queue" && hasActiveDownloads && <b>{activeDownloads.length}</b>}</button>)}</nav><div className="engine-ready"><span className="pulse" />{config.language === "es" ? "MOTOR LOCAL LISTO" : "LOCAL ENGINE READY"}</div></header>
-    <main>{appError && <div className="error-card" role="alert"><strong>{t("errorTitle")}</strong><span>{appError}</span></div>}{view === "new" && <NewDownload api={api} config={config} setConfig={setConfig} directoryCheck={directoryCheck} setDirectoryCheck={setDirectoryCheck} downloads={downloads} setDownloads={updateDownloads} t={t} />}{["queue", "history"].includes(view) && <DownloadsView mode={view} downloads={downloads} api={api} refresh={refreshAfterAction} t={t} />}{view === "settings" && <Settings config={config} setConfig={setConfig} api={api} t={t} />}{view === "about" && <About t={t} />}</main>
-    <TransferStrip item={activeTransfer} language={config.language} />
-    {!config.cookie_consent && config.cookie_source !== "none" && <div className="consent"><div><strong>{t("consentTitle")}</strong><p>{t("consentBody")}</p></div><button className="primary" onClick={() => { const next = { ...config, cookie_consent: true }; setConfig(next); api?.updateConfig(next); }}>{t("consent")}</button></div>}
+    <header className="deck-topbar"><div className="brand"><div className="brand-monogram">D<span>↓</span></div><div><strong>Dr. Download</strong><small>{t("mediaTool")}</small></div></div><nav aria-label={t("navigation")}>{nav.map((name) => <button key={name} className={view === name ? "active" : ""} onClick={() => setView(name)}><Icon name={name} /><span>{t(name)}</span>{name === "queue" && hasActiveDownloads && <b>{activeDownloads.length}</b>}</button>)}</nav><div className={`engine-ready engine-${connection}`} role="status"><span className="pulse" />{t(connection)}</div></header>
+    <main><ErrorNotice reason={appError} t={t}><button className="secondary" onClick={() => { if (configError) loadConfiguration(); refresh().catch(() => { /* refresh displays the failure. */ }); }}>{t("retry")}</button></ErrorNotice>
+      <div hidden={view !== "new"}><NewDownload api={api} config={config} setConfig={setConfig} directoryCheck={directoryCheck} setDirectoryCheck={setDirectoryCheck} downloads={downloads} setDownloads={updateDownloads} setView={setView} requestedUrl={requestedUrl} configLoaded={configLoaded} t={t} /></div>
+      {["queue", "history"].includes(view) && <DownloadsView mode={view} downloads={downloads} api={api} refresh={refreshAfterAction} setView={setView} inspectAgain={inspectAgain} t={t} />}
+      <div hidden={view !== "settings"}><Settings config={config} setConfig={setConfig} api={api} externalBusy={consentBusy || !configLoaded} onBusyChange={setSettingsBusy} t={t} /></div>{view === "about" && <About t={t} />}</main>
+    <TransferStrip item={activeTransfer} t={t} />
+    {configLoaded && !config.cookie_consent && config.cookie_source !== "none" && <div className="consent"><div><strong>{t("consentTitle")}</strong><p>{t("consentBody")}</p><ErrorNotice reason={consentError} t={t} /></div><button disabled={consentBusy || settingsBusy} className="primary" onClick={allowCookies}>{t(consentBusy ? "consentSaving" : "consent")}</button></div>}
   </div>;
 }

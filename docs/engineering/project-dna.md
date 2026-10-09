@@ -39,3 +39,9 @@ Este contrato es normativo para personas, IA, CI y releases. Si una regla no pue
 La validación de Authenticode pertenece exclusivamente a `QA-GATE-SIGN-001`, después de recibir el artefacto firmado; nunca forma parte del gate unsigned previo.
 
 Un fallo en cualquier `QA-GATE-*` conserva o restablece el estado `blocked`; nunca degrada el requisito ni convierte evidencia parcial en aceptación.
+
+## Veracidad de experiencia
+
+El [contrato aprobado US-062–US-066](../product/experience-reliability.md) obliga a confirmar disponibilidad por lecturas y guardado por respuesta, separar inspección indeterminada de encolado, nombrar tamaños desconocidos y traducir causa/recuperación por código. El preset compatible exige H.264/AAC MP4 sin fallback; estimaciones no confiables se validan en IPC/API y no eliminan permisos ni defensa de archivos. Cookies requieren consentimiento confirmado y revocación para operaciones futuras. La ampliación local de historial tiene [ADR-003](../architecture/adr/ADR-003-experience-and-history.md); no autoriza el backlog ni altera gates. No marcar una historia aceptada por añadir documentación o pruebas aisladas.
+
+Consentimiento se valida estrictamente para la fuente persistida vigente en cada nueva lectura, incluyendo cola/retry/worker/comando. Una revocación no guardada bloquea nuevas peticiones UI pero no se declara persistida ni aplicada al backend. Errores transportados por IPC/contextBridge conservan un objeto simple message/detail; consumidores no dependen de propiedades de Error para traducir causa y recuperación.

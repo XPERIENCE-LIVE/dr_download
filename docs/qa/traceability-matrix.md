@@ -33,6 +33,11 @@ Formato: `Historia | contrato | símbolo/componente | prueba actual | evidencia 
 | US-054 | preservación al desinstalar | NSIS/installed smoke | sin prueba instalada automatizada | MAN-US-054 | 2.1.0 | blocked |
 | US-060 | accesibilidad AA | React/CSS/Electron | flujos React parciales | MAN-US-060 | 2.1.0 | partial |
 | US-061 | interfaz ES/EN | i18n/React/config | cambio de idioma y navegación española | MAN-US-061 | 2.1.0 | partial |
+| US-062 | estado/borrador de sesión | App/NewDownload/TransferStrip | workflow-ux.test.jsx: lectura, inspección, draft, queueing y prioridad; verde pendiente | MAN-US-062 | Unreleased | partial |
+| US-063 | presets y estimated_bytes API/IPC | media_service/directory_service/ipc-contract/NewDownload | workflow-ux.test.jsx: presets y espacio; API/IPC y FFprobe pendientes | MAN-US-063 | Unreleased | partial |
+| US-064 | códigos traducidos/rechazo IPC message/detail | i18n/App/DownloadCard/main/preload | workflow-ux + preload-errors: errores, idioma y serialización | MAN-US-064 | Unreleased | partial |
+| US-065 | PUT config/HTTP403 consentimiento vigente | App/Settings/NewDownload/config/queue/engine | workflow-ux + API/queue/engine: fuente, revocación y recheck; persistencia real pendiente | MAN-US-065 | Unreleased | partial |
+| US-066 | ADR-003/filtro y repetición local | History/NewDownload/downloader | workflow-ux.test.jsx: search/filter/duplicate; verde pendiente | MAN-US-066 | Unreleased | partial |
 | BUG-001 | `DirectoryCheck` | directory service/API/React | directory tests + React preflight | Windows clean acceptance | 2.1.0 | fixed |
 | QUALITY-001 | ADN/SDD/TDD ejecutable | contract validator + quality gates | validator tests + gate PR | `artifacts/quality/quality-pr.json` | 2.1.0 | fixed |
 

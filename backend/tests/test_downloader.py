@@ -7,12 +7,15 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import backend.downloader as downloader  # noqa: E402
+from backend import config
 
 _real_save_history = downloader._save_history
 
 
 @pytest.fixture(autouse=True)
-def reset_state(monkeypatch):
+def reset_state(monkeypatch, tmp_path):
+    monkeypatch.setattr(config, "CONFIG_FILE", str(tmp_path / "config.json"))
+    config.save_config({"cookie_source": "edge", "cookie_consent": False})
     monkeypatch.setattr(downloader, "_queue", Queue())
     monkeypatch.setattr(downloader, "_progress", {})
     monkeypatch.setattr(downloader, "_history", {})
@@ -57,6 +60,46 @@ def test_retry_download_reuses_id_without_duplicate_history(tmp_path):
     assert list(downloader._history) == ["task-1"]
     assert downloader._queue.get_nowait()[0] == "task-1"
     assert "error" not in downloader._history["task-1"]
+
+
+@pytest.mark.parametrize("consent, saved_source, expected", [
+    (False, "edge", "none"), (True, "firefox", "none"),
+    ("true", "edge", "none"), (1, "edge", "none"), (True, "edge", "edge"),
+])
+def test_retry_resolves_browser_source_from_current_consent(tmp_path, consent, saved_source, expected):
+    config.save_config({"cookie_consent": consent, "cookie_source": saved_source})
+    downloader._history["task-1"] = {
+        "id": "task-1", "url": "https://example.com/video", "format_id": "audio-mp3",
+        "output_dir": str(tmp_path), "cookie_source": "edge", "status": "failed",
+    }
+    retried = downloader.retry_download("task-1")
+    assert retried["id"] == "task-1"
+    assert retried["cookie_source"] == expected
+    assert downloader._queue.get_nowait()[-1] == expected
+    assert list(downloader._history) == ["task-1"]
+
+
+@pytest.mark.parametrize("consent, saved_source", [(False, "edge"), (True, "firefox"), ("true", "edge"), (1, "edge")])
+def test_queued_download_obeys_revoked_or_changed_consent(monkeypatch, tmp_path, consent, saved_source):
+    config.save_config({"cookie_consent": True, "cookie_source": "edge"})
+    task_id = downloader.enqueue_download("https://example.com", "audio", str(tmp_path), "audio-mp3", "edge")
+    config.save_config({"cookie_consent": consent, "cookie_source": saved_source})
+    observed = []
+    def download(engine, url, format_id, output_dir, cookie_source, on_progress, cancelled):
+        observed.append(cookie_source)
+        downloader.stop_event.set()
+        return None
+    monkeypatch.setattr(downloader, "resolve_engine", lambda: "yt-dlp.exe")
+    monkeypatch.setattr(downloader, "download_with_cookie_fallback", download)
+    downloader._worker()
+    assert observed == ["none"]
+    assert downloader.get_download(task_id)["cookie_source"] == "none"
+
+
+def test_legacy_enqueue_records_none_without_persisted_browser_consent(tmp_path):
+    task_id = downloader.enqueue_download("https://example.com", "video", str(tmp_path))
+    assert downloader._queue.get_nowait()[-1] == "none"
+    assert downloader.get_download(task_id)["cookie_source"] == "none"
 
 
 def test_delete_download_preserves_completed_file(tmp_path):

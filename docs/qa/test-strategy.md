@@ -11,7 +11,7 @@ Las pruebas unitarias pueden aislar una frontera con un doble controlado, pero n
 
 ## Gates automáticos
 
-Los siguientes nombres y rutas son **contratos objetivo**. Este commit documental no versiona sus implementaciones; hasta que las tareas correspondientes añadan y prueben los scripts y workflows, no existe ejecución reproducible desde un checkout limpio ni PASS atribuible a este commit.
+Los siguientes nombres y rutas definen **contratos objetivo**. `quality:pr` y `quality:release` existen en el repositorio; su existencia o una ejecución anterior no demuestra cumplimiento de todos los gates normativos. Post-SignPath y el smoke nightly requieren implementación/verificación y evidencia propias. Una discrepancia entre el script actual y el contrato conserva el gate bloqueado, no modifica este requisito ni acredita PASS del commit actual.
 
 - `npm run quality:pr`: contrato SDD, registro anti-duplicación, pytest, Jest, lint y build.
 - `npm run quality:release`: gate unsigned previo a SignPath; ejecuta todo el gate PR, PyInstaller/NSIS, aplicación empaquetada, descarga real de audio y vídeo, FFprobe y SHA-256 unsigned, y registra `publishable: false`.
@@ -33,3 +33,11 @@ No existen switches de omisión. Cada ejecución escribe evidencia JSON en `arti
 - Una falla conserva la salida original, abre o reabre su ID y vuelve a prueba roja, corrección mínima y regresión; nunca reduce aserciones ni produce éxito degradado.
 
 La evidencia documental no resuelve los hallazgos de `docs/qa/audits/2026-07-19-hierarchical-qa-audit.md`. Solo una ejecución fresca puede satisfacer el gate correspondiente.
+
+## Cobertura de experiencia confiable
+
+US-062–US-066: `electron/src/__tests__/workflow-ux.test.jsx` comprueba lecturas, inspección indeterminada, prioridad del pie, navegación, encolado, presets, espacio, errores, filtros, repetición y guardado con fronteras aisladas. Backend/IPC comprueban estimaciones estrictas, codecs compatibles y rechazo de selectores no permitidos. Las fichas declaran nombres existentes y los casos pendientes, sin convertir mocks en aceptación.
+
+Completar MAN-US-062–MAN-US-066 en binarios reales ES/EN y teclado, incluyendo backend detenido, escritura fallida/revocación tras reinicio, FFprobe H.264/AAC MP4, búsqueda por cada campo y hashes de archivos preservados al repetir. El mismo universo debe estar en épicas, fichas y ambas matrices; los casos manuales siguen pending hasta una ejecución verificable.
+
+Consentimiento: API inspect/create HTTP403 para autorización ausente/falsa/fuente distinta; recheck vigente de cola/retry/worker/comando y none registrado tras revocación confirmada; UI reevalúa tras validación de carpeta. Probar fallo de revocación como bloqueo local con reintento, sin inventar persistencia. IPC: `preserves structured backend failures across the serialized IPC boundary` comprueba rechazo simple message/detail; falta prueba real contextBridge en paquete para aceptación completa. Ajustes conserva guardado y resultado al navegar.

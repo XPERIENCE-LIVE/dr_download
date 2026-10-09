@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — experiencia confiable
+
+- US-062–US-066 documentan conexión confirmada, inspección indeterminada, encolado diferenciado, borrador de sesión y acceso explícito a Cola.
+- Presets simples de vídeo compatible H.264/AAC MP4, mejor vídeo y MP3; audio original/streams avanzados y tamaño desconocido explícito.
+- `estimated_bytes` opcional estricto en API/IPC eleva preflight a max(128 MiB, dos veces la estimación), sin debilitar permisos ni protección de archivos.
+- Recuperación ES/EN por código, guardado confirmado y consentimiento revocable; fallo de consentimiento bloquea nuevas operaciones con cookies.
+- ADR-003 aprueba búsqueda/filtro local de historial y aviso no prohibitivo de enlaces repetidos. Pegado múltiple, reordenar y pausar/reanudar quedan en backlog.
+- El motor revalida el consentimiento persistido del navegador en cola, reintentos y comandos; los errores estructurados conservan su detalle al atravesar Electron IPC y contextBridge.
+- Smoke de tres formatos con identidad explícita del paquete, H.264/AAC comprobado por FFprobe y hashes de archivos preservados; no acredita instalación/desinstalación ni firma.
+- Dependencias compatibles actualizadas y herramientas Jest/Babel-Jest/jsdom 30.5.2 para eliminar vulnerabilidades altas del gate. La auditoría conserva 26 moderadas transitivas de desarrollo; producción sin hallazgos npm.
+- Fichas, matrices, CLAUDE.md, ADN y guardrails enlazan el contrato; nuevas historias permanecen partial y su aceptación Windows pendiente. Los conteos y smokes registrados abajo son históricos, no evidencia del commit actual.
+
 ## Unreleased — Quality Gates ejecutables
 
 - Se añadió un gate SDD que valida historias, épicas, matrices, evidencia `accepted`, ADN y ledger anti-duplicación.

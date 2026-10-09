@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Request
 import logging
 import shutil
-from pydantic import BaseModel, HttpUrl, ValidationError
+from pydantic import BaseModel, Field, HttpUrl, ValidationError, conint
 try:
     from pydantic import TypeAdapter
 except ImportError:  # pragma: no cover - pydantic<2
@@ -31,9 +31,10 @@ from .downloader import (
 from .media_service import COOKIE_SOURCES, inspect_media
 from .engine_updater import ensure_engine_ready
 from .error_mapping import classify_error
-from .config import load_config, save_config
+from .config import authorized_cookie_source, load_config, save_config
 from .utils import setup_logging
 from .directory_service import ensure_output_directory
+from .engine_runner import FORMAT_ID_PATTERN
 import uvicorn
 import os
 
@@ -113,9 +114,12 @@ class InspectRequest(BaseModel):
 
 class PremiumDownloadRequest(BaseModel):
     url: HttpUrl
-    format_id: str
+    format_id: str = Field(**{
+        "pattern" if hasattr(BaseModel, "model_validate") else "regex": FORMAT_ID_PATTERN
+    })
     output_dir: str
     cookie_source: str = "none"
+    estimated_bytes: conint(strict=True, ge=0, le=9007199254740991) | None = None
 
 
 class DirectoryValidationRequest(BaseModel):
@@ -154,6 +158,8 @@ def _not_found():
 async def inspect_media_endpoint(request: InspectRequest):
     if request.cookie_source not in COOKIE_SOURCES:
         raise HTTPException(status_code=400, detail="Unsupported cookie source")
+    if request.cookie_source != authorized_cookie_source(request.cookie_source):
+        raise HTTPException(status_code=403, detail=classify_error("Browser consent required"))
     try:
         return inspect_media(str(request.url), request.cookie_source)
     except Exception as exc:
@@ -168,10 +174,14 @@ async def inspect_media_endpoint(request: InspectRequest):
 async def create_download(request: PremiumDownloadRequest):
     if request.cookie_source not in COOKIE_SOURCES:
         raise HTTPException(status_code=400, detail="Unsupported cookie source")
+    if request.cookie_source != authorized_cookie_source(request.cookie_source):
+        raise HTTPException(status_code=403, detail=classify_error("Browser consent required"))
     directory = ensure_output_directory(request.output_dir, min_free_bytes=0)
     if not directory.valid:
         raise HTTPException(status_code=400, detail=directory.as_dict())
-    if shutil.disk_usage(directory.path).free < 128 * 1024 * 1024:
+    # Advisory staging/conversion headroom; worker disk errors remain authoritative.
+    required_bytes = max(128 * 1024 * 1024, 2 * (request.estimated_bytes or 0))
+    if shutil.disk_usage(directory.path).free < required_bytes:
         raise HTTPException(
             status_code=400,
             detail=classify_error("No space left on device", request.cookie_source),

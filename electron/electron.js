@@ -77,7 +77,15 @@ function assertTrustedSender(event) {
 function registerIpc() {
   ipcMain.handle("dr-download:api", async (event, operation, ...args) => {
     assertTrustedSender(event);
-    return requestBackend(operation, args);
+    try {
+      return await requestBackend(operation, args);
+    } catch (error) {
+      // Electron serializes thrown errors without their custom detail fields.
+      if (error.detail && typeof error.detail === "object" && !Array.isArray(error.detail)) {
+        return { drDownloadError: error.detail };
+      }
+      throw error;
+    }
   });
   ipcMain.handle("dr-download:select-folder", async (event) => {
     assertTrustedSender(event);
@@ -89,7 +97,9 @@ function registerIpc() {
     const record = await requestBackend("getDownload", [id]);
     const target = resolveDownloadTarget(record, action);
     if (!fs.existsSync(target)) throw new Error("Recorded download target does not exist");
-    return shell.openPath(target);
+    const failure = await shell.openPath(target);
+    if (failure) throw new Error(failure);
+    return true;
   });
   ipcMain.handle("dr-download:notify", async (event, payload) => {
     assertTrustedSender(event);

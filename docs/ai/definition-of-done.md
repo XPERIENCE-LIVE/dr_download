@@ -18,6 +18,10 @@ Una historia está `done` solo cuando todos sus ítems aplicables están marcado
 
 Un check de historia bloqueado mantiene esa historia fuera de `accepted`; no existe cierre condicional ni excepción implícita.
 
+Para US-062–US-066 comprobar además los estados éxito/pendiente/fallo/desconocido ES/EN del [contrato de experiencia](../product/experience-reliability.md), navegación con borrador, límites API/IPC, codecs FFprobe, revocación persistida y hashes de archivos al repetir. Las fichas enlazan pruebas reales; sus casos Windows siguen `pending` hasta ejecución del paquete. No sustituir esa evidencia con tests React aislados.
+
+US-064/065 incluyen serialización real de detail a través de IPC/contextBridge, autorización estricta por navegador, recheck en API/cola/retry/worker/comando y después de validación UI asíncrona. Un fallo al guardar revocación se acepta solo como bloqueo local visible con reintento; requiere guardado confirmado para acreditar política backend/reinicio. Al navegar, Ajustes conserva resultados pendientes.
+
 ## Checklist de release
 
 La release solo se evalúa después de que las historias del alcance estén `accepted` o exista una reducción de scope aprobada. La aprobación de release no crea ni sustituye aceptación de historias.

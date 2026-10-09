@@ -1,6 +1,13 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const call = (operation, ...args) => ipcRenderer.invoke("dr-download:api", operation, ...args);
+const call = async (operation, ...args) => {
+  const result = await ipcRenderer.invoke("dr-download:api", operation, ...args);
+  if (result?.drDownloadError) {
+    // contextBridge also drops custom Error fields; reject transferable data.
+    return Promise.reject({ message: result.drDownloadError.message || "Backend operation failed", detail: result.drDownloadError });
+  }
+  return result;
+};
 
 contextBridge.exposeInMainWorld("drDownload", Object.freeze({
   inspectMedia: (request) => call("inspectMedia", request),

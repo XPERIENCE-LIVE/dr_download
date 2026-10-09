@@ -33,5 +33,10 @@ Estados: `covered` tiene evidencia automatizada suficiente; `partial` tiene cobe
 | US-054 | contrato de preservación | desinstalar NSIS exacto y comparar archivo | blocked | MAN-US-054 pending; smoke instalado aún no existe |
 | US-060 | flujos React parciales | teclado, lector, contraste, escalas y movimiento reducido | partial | MAN-US-060 pending |
 | US-061 | cambio de idioma React | recorrido completo ES/EN y reinicio | partial | MAN-US-061 pending |
+| US-062 | workflow-ux.test.jsx: lecturas, inspección, navegación, encolado y pie; ejecución verde pendiente | backend interrumpido, borrador y cola real ES/EN | partial | MAN-US-062 pending |
+| US-063 | workflow-ux.test.jsx: presets y espacio; API/IPC y FFprobe pendientes | codecs H.264/AAC, espacio y tamaño desconocido | partial | MAN-US-063 pending |
+| US-064 | workflow-ux + preload-errors: recuperación, idioma y rechazo IPC message/detail; aceptación pendiente | errores reales y diagnóstico redactado ES/EN | partial | MAN-US-064 pending |
+| US-065 | workflow-ux + API/queue/engine: consentimiento por fuente, revocación y recheck; persistencia real pendiente | fallo de guardado/navegación, cambio de navegador, revocación, cola y retry | partial | MAN-US-065 pending |
+| US-066 | workflow-ux.test.jsx: búsqueda, estado y repetición; ejecución verde pendiente | repetir con archivos protegidos y filtros ES/EN | partial | MAN-US-066 pending |
 
 El responsable de QA cambia el estado únicamente después de enlazar evidencia reproducible en `docs/qa/traceability-matrix.md`.

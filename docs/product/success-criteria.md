@@ -11,6 +11,12 @@ Este documento convierte el objetivo comercial en condiciones verificables. Una 
 | Cancelación | 0 procesos `yt-dlp`/FFmpeg huérfanos después de cancelar | prueba de proceso y logs |
 | Historial | 100% de completados apuntan al archivo real existente | SQLite + prueba de integración |
 | Recuperación | reinicio conserva cola e historial sin duplicar entradas | prueba de reinicio |
+| Estados veraces | 0 disponibilidades no confirmadas, porcentajes de inspección o tamaños ficticios | pruebas de lectura/pending/fallo y MAN-US-062 |
+| Continuidad | enlace, inspección y selección conservados al navegar durante la sesión | prueba de navegación y MAN-US-062 |
+| Formato compatible | 100% de resultados del preset compatible comprobados son MP4 H.264/AAC; ausencia rechazada sin sustitución | API/IPC + FFprobe y MAN-US-063 |
+| Preflight estimado | 0 tareas creadas con espacio inferior a max(128 MiB, dos veces estimated_bytes válido); 0 valores inválidos admitidos | límites API/IPC y MAN-US-063 |
+| Recuperación y persistencia | 0 éxitos ficticios de guardado; 0 nuevas operaciones con cookies tras revocación o consentimiento fallido | pruebas de errores/config y MAN-US-064/065 |
+| Historial y repetición | búsqueda por los tres campos y estado cumple todos los casos declarados; repetición permitida con 0 archivos previos sobrescritos | pruebas de filtro/aviso, hashes y MAN-US-066 |
 
 ## Éxito de calidad
 

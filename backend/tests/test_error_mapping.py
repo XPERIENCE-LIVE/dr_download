@@ -14,6 +14,7 @@ from backend.error_mapping import classify_error
         ("FFmpeg is unavailable", "none", "ffmpeg_missing"),
         ("network timeout while reading", "none", "network_error"),
         ("extractor exploded", "none", "engine_error"),
+        ("Browser consent required", "edge", "browser_consent_required"),
     ],
 )
 def test_classify_error_returns_safe_actionable_codes(message, cookie_source, code):

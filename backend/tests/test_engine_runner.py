@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from backend import config
 
 from backend.engine_runner import (
     FILE_PREFIX,
@@ -20,6 +21,12 @@ from backend.engine_runner import (
 )
 
 
+@pytest.fixture(autouse=True)
+def isolated_cookie_authorization(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "CONFIG_FILE", str(tmp_path / "config.json"))
+    config.save_config({"cookie_source": "edge", "cookie_consent": False})
+
+
 def test_windows_cancellation_terminates_the_process_tree():
     process = type("Process", (), {"pid": 4321, "wait": lambda self, timeout=None: 0})()
 
@@ -33,6 +40,7 @@ def test_windows_cancellation_terminates_the_process_tree():
 
 
 def test_build_command_uses_browser_only_when_consented(tmp_path, monkeypatch):
+    config.save_config({"cookie_source": "edge", "cookie_consent": True})
     node = tmp_path / "node.exe"
     node.write_bytes(b"node")
     monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
@@ -116,6 +124,28 @@ def test_best_video_prefers_aac_audio_that_windows_players_can_decode(monkeypatc
     assert command[command.index("--format") + 1] == "bv*+ba[ext=m4a]/bv*+ba/b"
 
 
+def test_compatible_video_filters_codecs_and_remuxes_mp4(monkeypatch, tmp_path):
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+    command = build_command("yt-dlp.exe", "https://example.com", "video-compatible", str(tmp_path), "none")
+    assert command[command.index("--format") + 1] == (
+        "bv[vcodec~='^(avc1|avc3|h264)']+ba[ext=m4a][acodec~='^(mp4a|aac)']/"
+        "b[vcodec~='^(avc1|avc3|h264)'][acodec~='^(mp4a|aac)']"
+    )
+    assert command[command.index("--merge-output-format") + 1] == "mp4"
+    assert command[command.index("--remux-video") + 1] == "mp4"
+
+
+@pytest.mark.parametrize("format_id", ["137/best", "137+140", "best[ext=mp4]", "137,140", "(137)", " hls-2500", "x" * 129])
+def test_build_command_rejects_selector_expressions_as_direct_ids(monkeypatch, tmp_path, format_id):
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+    with pytest.raises(ValueError, match="Unsupported format"):
+        build_command("yt-dlp.exe", "https://example.com", format_id, str(tmp_path), "none")
+
+
 def test_build_command_uses_bundled_ffmpeg(monkeypatch, tmp_path):
     node = tmp_path / "node.exe"
     node.write_bytes(b"node")
@@ -155,6 +185,7 @@ def test_parse_progress_returns_normalized_numbers():
 
 
 def test_inspection_uses_supported_javascript_runtime_with_browser_cookies(monkeypatch, tmp_path):
+    config.save_config({"cookie_source": "firefox", "cookie_consent": True})
     node = tmp_path / "node.exe"
     node.write_bytes(b"node")
     monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
@@ -172,6 +203,20 @@ def test_inspection_uses_supported_javascript_runtime_with_browser_cookies(monke
     command = run.call_args.args[0]
     assert command[command.index("--js-runtimes") + 1] == f"node:{node}"
     assert command[command.index("--cookies-from-browser") + 1] == "firefox"
+
+
+@pytest.mark.parametrize("consent, source", [(False, "edge"), (True, "firefox"), ("true", "edge"), (1, "edge")])
+def test_engine_commands_cannot_read_a_revoked_browser_session(monkeypatch, tmp_path, consent, source):
+    config.save_config({"cookie_consent": consent, "cookie_source": source})
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+    command = build_command("yt-dlp.exe", "https://example.com", "audio-mp3", str(tmp_path), "edge")
+    assert "--cookies-from-browser" not in command
+    completed = type("Completed", (), {"returncode": 0, "stdout": '{"title": "public"}', "stderr": ""})()
+    with patch("backend.engine_runner.subprocess.run", return_value=completed) as run:
+        assert inspect_with_engine("yt-dlp.exe", "https://example.com", "edge")["title"] == "public"
+    assert "--cookies-from-browser" not in run.call_args.args[0]
 
 
 def test_node_runtime_fails_closed_when_bundled_executable_is_missing(monkeypatch):

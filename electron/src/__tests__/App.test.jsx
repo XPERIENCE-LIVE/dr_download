@@ -101,7 +101,7 @@ describe("Dr. Download premium shell", () => {
       output_dir: "C:\\Downloads",
       cookie_source: "edge"
     }));
-    expect(await screen.findByText("En cola")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Ver cola" })).toBeInTheDocument();
   });
 
   test("confirms the queue even when the worker races past 'queued' before the response arrives", async () => {
@@ -119,7 +119,7 @@ describe("Dr. Download premium shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Agregar a la cola" }));
 
     await waitFor(() => expect(window.drDownload.createDownload).toHaveBeenCalled());
-    expect(await screen.findByText("En cola")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Ver cola" })).toBeInTheDocument();
   });
 
   test("validates the destination before queueing", async () => {
@@ -139,7 +139,7 @@ describe("Dr. Download premium shell", () => {
     fireEvent.click(screen.getByRole("button", { name: "Analizar enlace" }));
     expect(await screen.findByText("Video de prueba")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Agregar a la cola" })).toBeDisabled();
-    expect(await screen.findByText("Elige otra carpeta")).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Elige otra carpeta");
     expect(window.drDownload.createDownload).not.toHaveBeenCalled();
   });
 
@@ -315,9 +315,9 @@ describe("automatic download refresh", () => {
       fireEvent.click(screen.getByRole("button", { name: "Analizar enlace" }));
     });
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Agregar a la cola" })); });
-    expect(screen.getByText("TRANSFERENCIA ACTIVA")).toBeInTheDocument();
+    expect(screen.getByText("DESCARGA EN ESPERA")).toBeInTheDocument();
     await act(async () => { resolveHistory([]); });
-    expect(screen.getByText("TRANSFERENCIA ACTIVA")).toBeInTheDocument();
+    expect(screen.getByText("DESCARGA EN ESPERA")).toBeInTheDocument();
   });
 
   test("recovers after an initial read failure without replaying old notifications", async () => {

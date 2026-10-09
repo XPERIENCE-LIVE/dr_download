@@ -30,3 +30,9 @@ Tipografía: Segoe UI Variable para interfaz y Cascadia Mono para datos. Radio m
 
 Todos los controles tienen foco de 2 px ámbar. Las transiciones se eliminan con `prefers-reduced-motion`.
 
+## Estados y decisiones de descarga
+
+La línea de inspección indica actividad indeterminada sin porcentaje. Inspección, encolado y guardado tienen etiquetas y estados separados, anunciados con semántica accesible. El pie prioriza la ejecución y traduce fases. Los datos desconocidos se etiquetan como desconocidos. Después de encolar existe **Ver cola / View queue**.
+
+La selección principal muestra vídeo compatible, mejor vídeo y MP3 con descripciones de resultado; audio original y streams técnicos se agrupan en expansión avanzada accesible. Las acciones de recuperación aparecen junto a la causa traducida; un cambio pendiente de ajustes no recibe confirmación de éxito. Historial incluye búsqueda, estado y limpieza de filtros; el aviso de enlace repetido permite continuar. El [contrato de experiencia](../product/experience-reliability.md) es la fuente de comportamiento, y [copy ES/EN](error-copy.md) la guía de errores.
+

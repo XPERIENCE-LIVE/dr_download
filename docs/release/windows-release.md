@@ -2,7 +2,7 @@
 
 ## Estado de implementación
 
-Los comandos y rutas de esta guía son **contratos objetivo**, no evidencia de capacidades incluidas en este commit documental. En particular, `backend/requirements-build.txt`, `tools/quality-gate.ps1`, `tools/validate-release.ps1`, los scripts `quality:*` y los workflows nombrados deben ser versionados y verificados por las tareas de implementación correspondientes. Hasta entonces, un checkout limpio no puede ejecutar reproduciblemente esta guía y la release permanece bloqueada; ningún PASS observado solo en un workspace se atribuye a este commit.
+Esta guía define **contratos objetivo**. El repositorio ya contiene build y gates PR/release, pero su existencia no certifica instalación limpia, aprobación de historias ni separación unsigned/post-SignPath conforme al ADN. Validar el comportamiento y la evidencia del script actual frente a este contrato; cualquier gap conserva la release bloqueada. Ningún PASS de otro SHA o observado solo en un workspace se atribuye al candidato actual.
 
 ## Contrato objetivo de build interno
 
@@ -49,3 +49,5 @@ Un defecto de aplicación ya publicado activa `QA-GATE-ROLLFORWARD-001` y `docs/
 ## Gate específico de carpetas
 
 Antes de publicar, probar una carpeta nueva, una ruta relativa, un archivo usado como carpeta, una carpeta sin permisos y un volumen con poco espacio. La UI debe mostrar `error_code`, causa y recuperación; nunca publicar el error técnico sin traducir.
+
+La ampliación aprobada US-062–US-066 añade espacio estimado estricto API/IPC, compatible MP4 H.264/AAC sin sustitución, conectividad y operaciones veraces, borrador de sesión, guardado/consentimiento, recuperación ES/EN y búsqueda/filtro/repetición protegida. Sus nuevos MAN-US-062–MAN-US-066 permanecen pending; no se excluyen del universo de release ni se aceptan por documentación o Jest aislado.

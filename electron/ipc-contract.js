@@ -23,9 +23,21 @@ const directoryBody = (body) => {
   return { path: body.path };
 };
 
+const downloadBody = (body) => {
+  requestBody(body);
+  if (typeof body.format_id !== "string" || !/^[A-Za-z0-9_.:-]{1,128}$/.test(body.format_id)) {
+    throw new Error("Invalid format identifier");
+  }
+  if (body.estimated_bytes != null &&
+      (!Number.isSafeInteger(body.estimated_bytes) || body.estimated_bytes < 0)) {
+    throw new Error("Invalid size estimate");
+  }
+  return body;
+};
+
 const routes = {
   inspectMedia: ([body]) => ({ method: "POST", path: "/media/inspect", body: requestBody(body) }),
-  createDownload: ([body]) => ({ method: "POST", path: "/downloads", body: requestBody(body) }),
+  createDownload: ([body]) => ({ method: "POST", path: "/downloads", body: downloadBody(body) }),
   listDownloads: () => ({ method: "GET", path: "/downloads" }),
   getDownload: ([id]) => ({ method: "GET", path: `/downloads/${taskPath(id)}` }),
   cancelDownload: ([id]) => ({ method: "POST", path: `/downloads/${taskPath(id)}/cancel` }),

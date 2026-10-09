@@ -65,3 +65,11 @@ def load_config():
 def save_config(config):
     with open(CONFIG_FILE, "w") as f:
         json.dump(config, f, indent=4)
+
+
+def authorized_cookie_source(requested: str) -> str:
+    """Apply persisted consent to new browser-session access, including retries."""
+    if requested not in {"edge", "firefox"}:
+        return "none"
+    config = load_config()
+    return requested if config.get("cookie_consent") is True and config.get("cookie_source") == requested else "none"

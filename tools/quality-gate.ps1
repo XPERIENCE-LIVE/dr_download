@@ -20,7 +20,7 @@ function Assert-LastExitCode([string]$Step) {
 }
 
 function Get-WorkspaceSha256 {
-    $sourceRoots = @("backend", "electron/src", "tools", "tests", "docs", ".github")
+    $sourceRoots = @("backend", "electron/src", "electron/scripts", "tools", "tests", "docs", ".github")
     $files = foreach ($sourceRoot in $sourceRoots) {
         Get-ChildItem -LiteralPath (Join-Path $projectRoot $sourceRoot) -File -Recurse |
             Where-Object { $_.FullName -notmatch "(__pycache__|test-artifacts|[\\/]logs[\\/])" }

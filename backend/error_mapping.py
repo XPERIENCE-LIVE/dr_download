@@ -17,6 +17,12 @@ def is_browser_cookie_error(message: str) -> bool:
 def classify_error(message: str, cookie_source: str = "none") -> dict[str, str]:
     text = (message or "").lower()
     browser = "Edge" if cookie_source == "edge" else "Firefox"
+    if "browser consent required" in text:
+        return {
+            "code": "browser_consent_required",
+            "message": "El acceso a la sesión del navegador no está autorizado.",
+            "recovery": "Autoriza el navegador seleccionado en Ajustes o continúa sin cookies para contenido público.",
+        }
     if "sign in to confirm your age" in text:
         recovery = (
             "En Ajustes, selecciona Edge o Firefox como fuente de cookies. "

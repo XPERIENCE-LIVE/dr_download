@@ -28,3 +28,8 @@
 - No sustituir SignPath Foundation por un certificado CSC local en una release pública.
 - Publicar únicamente el hash firmado que atravesó el gate completo y recibió aprobación humana final.
 - Ante un defecto publicado, ejecutar roll-forward firmado desde el último tag bueno; no forzar downgrade ni reutilizar firma o evidencia.
+- Aplicar [experiencia confiable](../product/experience-reliability.md): sin conexión, porcentajes, tamaños, compatibilidad ni éxito de guardado ficticios; errores con causa/recuperación ES/EN, consentimiento confirmado y revocable.
+- Validar estimated_bytes estrictamente en IPC/API; preservar preflight, permisos, formato permitido y protección de archivos. El aviso de enlace repetido no lo prohíbe.
+- ADR-003 aprueba búsqueda/filtro/aviso local; el [backlog diferido](../product/backlog.md) no autoriza pegado múltiple, reordenar, pausar/reanudar, nube, IA o reescritura.
+- Consentimiento backend es cookie_consent estrictamente true y misma fuente persistida; revalidar en cola/retry/worker/comando y tras awaits de validación en UI. Revocación fallida bloquea lecturas nuevas UI, sin prometer modificación backend o persistencia tras reinicio.
+- Transportar errores IPC/contextBridge como rechazo simple message/detail y leer reason.detail; no asumir conservación de propiedades personalizadas de Error. Código desconocido recibe causa/recuperación seguras ES/EN.

@@ -18,6 +18,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body, #root { margin: 0; min-width: 760px; min-height: 100%; background: var(--carbon); }
 body { overflow-x: hidden; }
 button, input, select { font: inherit; }
@@ -125,6 +126,21 @@ main { min-width: 0; }
 .signal-line i { position: absolute; top: -5px; width: 2px; height: 12px; background: var(--bone); transition: left .3s ease; }
 .signal-completed span { background: var(--mint); }
 .signal-failed span { background: var(--danger); }
+.signal-line.indeterminate span { width: 25%; animation: signal-pending 1.2s ease-in-out infinite alternate; }
+@keyframes signal-pending { to { transform: translateX(300%); } }
+.engine-engineUnavailable, .engine-engineUnavailable .pulse { color: var(--danger); }
+.engine-engineUnavailable .pulse { background: var(--danger); }
+.engine-connecting, .engine-connecting .pulse { color: var(--amber); }
+.engine-connecting .pulse { background: var(--amber); }
+.advanced-control { display: flex !important; gap: 8px; align-items: center; }
+.size-estimate, .estimate-hint { margin: 0; color: var(--muted); font-size: 12px; }
+.warning { padding: 12px; border: 1px solid var(--amber); color: var(--amber); font-size: 12px; }
+.queue-confirmation { display: flex; align-items: center; gap: 16px; margin-top: 20px; color: var(--mint); }
+.queue-confirmation button { padding: 10px 15px; border: 1px solid var(--line-strong); border-radius: 4px; }
+.history-controls { display: flex; flex-wrap: wrap; gap: 18px; margin-bottom: 20px; }
+.history-controls label { display: grid; gap: 8px; color: var(--muted); font-size: 12px; }
+.history-controls input { min-height: 46px; padding: 11px 13px; border: 1px solid var(--line-strong); border-radius: 4px; color: var(--bone); background: #100e15; }
+.toggle input:focus-visible + span { outline: 2px solid var(--amber); outline-offset: 3px; }
 
 .media-summary { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 19px; margin-top: 36px; padding-top: 22px; border-top: 1px solid var(--line); }
 .media-thumb { position: relative; min-height: 106px; display: grid; place-items: center; overflow: hidden; color: var(--violet); background: #0a090d; }

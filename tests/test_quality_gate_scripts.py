@@ -44,6 +44,7 @@ def test_pr_gate_executes_every_required_validator_without_skip_switches():
     assert "npm audit --prefix electron --audit-level=high" in script
     assert "Skip" not in script
     assert "workspace_sha256" in script
+    assert '"electron/scripts"' in script
     assert "UTF8Encoding($false)" in script
     assert "COMPUTERNAME" not in script
 

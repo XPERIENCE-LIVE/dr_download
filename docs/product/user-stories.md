@@ -481,3 +481,83 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Prueba E2E:** `MAN-US-061`: recorrer todos los estados en ES/EN y escanear claves o idioma mezclado.
 - **Evidencia requerida:** catálogo comparado, capturas por estado, preferencia persistida, SO, ejecutor, fecha y SHA.
 - **Riesgos:** copy nuevo sin clave equivalente o contenido técnico sin traducción.
+
+### US-062 — Estado veraz y borrador de sesión
+
+- **ID:** US-062
+- **Épica:** E7 — Experiencia accesible y localizada.
+- **Persona:** usuario que prepara una descarga y consulta otras vistas.
+- **Problema:** una conexión asumida, porcentaje ficticio o borrador perdido impiden entender y terminar la preparación.
+- **Precondiciones:** aplicación abierta, backend accesible o fallo controlado, enlace autorizado.
+- **Flujo principal:** confirmar lectura backend → analizar con indicador indeterminado → elegir opciones → navegar y volver con borrador → encolar con estado propio → usar Ver cola.
+- **Flujos alternativos:** lectura fallida muestra desconexión; editar URL invalida inspección; reinicio descarta borrador; el pie prioriza ejecución sobre cola.
+- **Given/When/Then:** Given lectura pendiente o fallida, When se presenta el backend, Then nunca figura conectado sin confirmación. Given inspección pendiente, When se muestra actividad, Then no hay porcentaje inventado y encolar tiene estado separado. Given borrador preparado, When navega y vuelve, Then conserva enlace, inspección y opciones durante la sesión. Given una tarea queued y otra downloading, When se muestra el pie, Then prioriza la que ejecuta con fase traducida y permite Ver cola tras encolar.
+- **Prueba unitaria:** `does not announce a ready engine before a successful read or after a failed read`; `inspection shows indeterminate progress without inventing a percentage`; `transfer strip prefers a running download over an earlier queued entry`; `keeps the inspected draft and selected format when navigating to settings`; `queueing has its own pending phase and offers a direct route to the queue`. Son pruebas aisladas; ejecución verde pendiente.
+- **Prueba de integración:** pendiente de evidencia del puente IPC con lectura confirmada/fallida y navegación de la UI compilada.
+- **Prueba E2E:** `MAN-US-062`: preparar, navegar, interrumpir backend y observar ejecución/cola en ES/EN.
+- **Evidencia requerida:** captura de estados sin porcentaje ficticio, borrador conservado, tarea priorizada y logs redactados con SO, fecha, versión y SHA.
+- **Riesgos:** respuestas tardías que sobrescriben borrador o anuncian conectividad sin lectura confirmada.
+
+### US-063 — Formato comprensible y espacio estimado
+
+- **ID:** US-063
+- **Épica:** E7 — Experiencia accesible y localizada.
+- **Persona:** usuario que necesita vídeo compatible o audio sin conocer codecs.
+- **Problema:** elegir un stream técnico no garantiza un archivo reproducible ni espacio suficiente.
+- **Precondiciones:** medio inspeccionado, FFmpeg incluido y carpeta seleccionada.
+- **Flujo principal:** elegir vídeo compatible, mejor vídeo o MP3 → revisar tamaño conocido/desconocido → validar destino con estimación → encolar → comprobar archivo final.
+- **Flujos alternativos:** audio original y streams aparecen bajo opciones avanzadas; falta de H.264/AAC rechaza preset compatible; estimación omitida usa mínimo de espacio.
+- **Given/When/Then:** Given preset video-compatible, When se descarga, Then el archivo MP4 contiene H.264/AAC o falla explícitamente sin sustituir codecs. Given tamaño ausente, When se muestra la inspección, Then dice Tamaño desconocido en el idioma activo. Given estimated_bytes válido, When crea tarea, Then backend exige max(128 MiB, dos veces la estimación) y la UI comprueba ese umbral con espacio libre del destino. Given estimación booleana, negativa, fraccionaria, textual o fuera de rango, When llega por IPC/API, Then se rechaza antes de encolar.
+- **Prueba unitaria:** `shows simple presets and size while keeping stream selection advanced`; `blocks queueing when the known estimate exceeds available processing space`. Validación estricta API/IPC y ejecución verde pendientes.
+- **Prueba de integración:** `test_presets_estimate_both_streams_and_keep_compatible_separate_from_best`; `test_video_estimate_is_unknown_when_audio_size_is_unknown`; `test_compatible_video_filters_codecs_and_remuxes_mp4`; `test_download_space_preflight_uses_advisory_estimate`; `test_download_rejects_unbounded_or_coerced_size_estimates`; `test_download_rejects_direct_selector_expressions_before_queueing`. Las fronteras controladas no acreditan codecs del paquete; FFprobe real permanece pendiente.
+- **Prueba E2E:** `MAN-US-063`: elegir presets, expandir formatos, probar tamaño desconocido y destino insuficiente; comprobar MP4 con FFprobe.
+- **Evidencia requerida:** payloads API/IPC, límites de espacio, salida FFprobe, hashes y registros del paquete real con SHA y configuración.
+- **Riesgos:** estimación incompleta, espacio cambiante o catálogo sin codecs compatibles; la estimación es asesoría, no garantía.
+
+### US-064 — Errores traducidos con recuperación
+
+- **ID:** US-064
+- **Épica:** E7 — Experiencia accesible y localizada.
+- **Persona:** usuario que encuentra un fallo de inspección, transferencia o destino.
+- **Problema:** un mensaje técnico o genérico no permite decidir cómo recuperar el flujo.
+- **Precondiciones:** operación fallida con código estructurado o error desconocido.
+- **Flujo principal:** leer causa y recuperación ES/EN → activar reintento, análisis, ajustes, carpeta o diagnóstico según causa → recuperar sin perder datos.
+- **Flujos alternativos:** error desconocido usa mensaje humano seguro y diagnóstico redactado; fallos de cookies permiten modo sin cookies; retry mantiene ID.
+- **Given/When/Then:** Given un código conocido, When cambia a ES o EN, Then causa, recuperación y acciones usan ese idioma sin excepción cruda. Given fallo de destino, When elige otra carpeta, Then conserva inspección y valida antes de encolar. Given tarea fallida, When reintenta, Then conserva ID y archivos protegidos. Given error desconocido, When se presenta, Then ofrece diagnóstico local redactado y no expone datos privados.
+- **Prueba unitaria:** `inspection errors show recovery and allow another inspection`; `open-file failures are visible on the download card`; `English mode translates structured backend failures and all workflow labels`. Ejecución verde pendiente.
+- **Prueba de integración:** `preserves structured backend failures across the serialized IPC boundary` verifica el rechazo transferible message/detail; pendiente ejecutar errores reales de red/carpeta/cookies en el paquete y comprobar recuperación.
+- **Prueba E2E:** `MAN-US-064`: provocar fallos controlados y recorrer acciones en ambos idiomas.
+- **Evidencia requerida:** causa y acción visibles por clase de error, exportación redactada, recuperación y mismo ID tras retry, ligados al SHA.
+- **Riesgos:** confundir causa, mostrar un idioma incorrecto o filtrar detalles de excepción.
+
+### US-065 — Guardado confirmado y consentimiento revocable
+
+- **ID:** US-065
+- **Épica:** E7 — Experiencia accesible y localizada.
+- **Persona:** usuario que configura la aplicación y decide el uso temporal de cookies.
+- **Problema:** un guardado fallido no debe parecer éxito ni autorizar uso de sesión.
+- **Precondiciones:** configuración disponible y escritura permitida o fallo controlado.
+- **Flujo principal:** cambiar ajustes → ver guardado pendiente → confirmar éxito backend → consentir temporalmente → revocar desde Ajustes.
+- **Flujos alternativos:** fallo muestra causa y reintento al volver a Ajustes; fallo de consentimiento/revocación bloquea nuevas inspecciones/creaciones con navegador en la UI; usuario puede elegir modo sin cookies. Cola/retry siguen la configuración persistida y cambiar de fuente exige consentimiento nuevo.
+- **Given/When/Then:** Given escritura pendiente, When cambia ajustes o navega y vuelve, Then conserva resultado/fallo y no muestra éxito antes de confirmación. Given escritura fallida, When resuelve la solicitud, Then muestra fallo y permite reintentar sin fingir persistencia. Given consentimiento que no pudo guardarse, When pide analizar con cookies, Then no inicia esa operación. Given consentimiento otorgado, When revoca y se confirma guardado, Then las nuevas lecturas backend y tareas pendientes/reintentadas usan autorización vigente y el rechazo persiste tras reinicio. Given navegador distinto del autorizado, When solicita inspección/creación por API, Then recibe HTTP 403 browser_consent_required. Given revocación cuyo guardado falla, When pide inspección o creación desde UI, Then se bloquea el navegador localmente y se ofrece reintento sin prometer cambios backend tras reinicio. Given validación de carpeta pendiente, When cambia o revoca consentimiento antes de resolver, Then se reevalúa autorización antes de crear tarea.
+- **Prueba unitaria:** `settings display a failed save and confirm a successful retry`; `failed consent persistence keeps browser access unauthorized`; `changing the browser requires fresh consent before reading its session`; `revoking consent prevents new cookie reads even when saving fails`; `queueing rechecks consent after destination validation completes`. Son fronteras aisladas; no acreditan aceptación Windows.
+- **Prueba de integración:** `test_browser_requests_require_matching_persisted_consent`; `test_browser_download_accepts_matching_persisted_consent`; `test_retry_resolves_browser_source_from_current_consent`; `test_queued_download_obeys_revoked_or_changed_consent`; `test_legacy_enqueue_records_none_without_persisted_browser_consent`; `test_engine_commands_cannot_read_a_revoked_browser_session`; `test_inspection_service_rejects_browser_request_after_revocation`. Pendiente comprobar persistencia real de ajustes/rechazo tras reinicio sin almacenar cookies.
+- **Prueba E2E:** `MAN-US-065`: guardar/navegar, forzar fallo y reintentar, cambiar navegador, fallar revocación y confirmar otra; ejecutar cola/retry en ES/EN.
+- **Evidencia requerida:** respuestas de guardado, HTTP 403, configuración persistida, source none en cola/retry después de revocar y creación bloqueada ante cambio durante validación; evidencia real sin cookies ni tokens.
+- **Riesgos:** respuesta tardía, escritura fallida que deja autorización backend anterior o prometer interrupción de una transferencia ya iniciada; el bloqueo local ante fallo de revocación no garantiza persistencia tras reinicio.
+
+### US-066 — Buscar historial y advertir repeticiones
+
+- **ID:** US-066
+- **Épica:** E7 — Experiencia accesible y localizada.
+- **Persona:** usuario que encuentra un resultado anterior o repite una descarga intencionalmente.
+- **Problema:** un historial extenso oculta resultados y un enlace repetido puede crear trabajo involuntario.
+- **Precondiciones:** tareas locales cargadas; expansión aprobada por ADR-003.
+- **Flujo principal:** buscar por título, URL o archivo → filtrar por estado → abrir resultado por ID → preparar enlace repetido → leer aviso → decidir repetir.
+- **Flujos alternativos:** limpiar filtros restaura lista; búsqueda sin coincidencias muestra estado específico; historial vacío invita a preparar descarga.
+- **Given/When/Then:** Given resultados con títulos, URLs y archivos distintos, When busca sin distinguir mayúsculas y aplica estado, Then aparecen solo coincidencias conjuntas sin modificar registros. Given filtros activos, When los borra, Then recupera la lista original. Given enlace exacto repetido tras quitar espacios exteriores, When lo prepara, Then ve advertencia y puede encolarlo intencionalmente. Given nombres de archivo en colisión, When repite descarga, Then se conserva la protección existente contra sobrescritura.
+- **Prueba unitaria:** `history search and state filter narrow the displayed downloads`; `warns about a repeated link while allowing an intentional new copy`. Ejecución verde y prueba real de colisiones pendientes.
+- **Prueba de integración:** pendiente de comprobar que repetir conserva entradas independientes y archivos previos sin nuevas rutas HTTP.
+- **Prueba E2E:** `MAN-US-066`: buscar tres campos, combinar/limpiar filtros, repetir enlace y verificar hashes previos.
+- **Evidencia requerida:** resultados filtrados ES/EN, repetición permitida, IDs distintos y archivos preservados con configuración, fecha y SHA.
+- **Riesgos:** el aviso solo cubre enlaces exactos y tareas cargadas; no detecta equivalencias de URL ni sustituye defensa de filesystem.

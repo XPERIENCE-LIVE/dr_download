@@ -28,6 +28,8 @@ La identidad no se basa en texto libre: se conserva el ID aunque cambie la redac
 
 ## Entrada inicial
 
+Las entradas siguientes conservan el registro histórico de trabajo, no certifican estado actual ni evidencia válida para este SHA. El estado verificable vigente está en `change-ledger.json`: sus entradas permanecen `open` hasta evidencia aprobada del mismo commit. Los conteos históricos no deben reutilizarse como aceptación.
+
 `BUG-001 | Output directory not writable | ruta inexistente/no escribible no validada antes de encolar | directory_service, API, React | test_directory_service + App.test.jsx | build 2.1.0 | 96 pytest + 31 Jest | smoke empaquetado real de audio/vídeo y API validate | fixed; pendiente de aceptación Windows limpia`
 
 `GAP-US-050-NODE | runtime JavaScript externo | yt-dlp recibía node sin ruta | runtime-paths, engine_runner, media_service, package | tests Node RED | build 2.1.0 | runtime Node v22.14.0 incluido + packaged smoke | FFprobe y NSIS | fixed; pendiente VM limpia`
@@ -37,3 +39,7 @@ La identidad no se basa en texto libre: se conserva el ID aunque cambie la redac
 `GAP-US-043-ROTATION | logs en cwd y sin exportación | ruta relativa no apta para paquete | utils, diagnostics, preload, UI | tests de ruta/redacción/export RED | build 2.1.0 | logs userData y reporte acotado/redactado | 96 pytest + 31 Jest | fixed; pendiente E2E de exportación instalada`
 
 `QUALITY-001 | contratos no ejecutables y validaciones dispersas | documentación sin gate único | contract_validator, quality-gate, workflows, ledger | tests de validadores RED | workspace 6E36D58B... | gate PR verde; gate release recorre paquete y descargas reales y bloquea Authenticode NotSigned | artifacts/quality/quality-pr.json + quality-release.json | fixed; publicación bloqueada por US-053`
+
+## Experiencia confiable — 2026-10-08
+
+US-062–US-066 tienen fingerprints y regresiones independientes en el ledger JSON. Su [contrato](../product/experience-reliability.md) enlaza decisiones, límites y casos manuales. Estado `open`: implementación/pruebas aisladas no sustituyen evidencia de aceptación Windows; no se inventan SHA, build ni resultados. ADR-003 aprueba la ampliación de historial sin cerrar historias ni gates. El [backlog](../product/backlog.md) conserva solicitudes diferidas y sus condiciones de entrada.

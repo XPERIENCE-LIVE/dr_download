@@ -6,7 +6,7 @@ import threading
 import uuid
 from queue import Empty, Full, Queue
 
-from .config import DEFAULT_CONFIG, load_config
+from .config import DEFAULT_CONFIG, authorized_cookie_source, load_config
 from .store import DownloadStore
 from .engine_runner import download_with_cookie_fallback, resolve_engine
 from .error_mapping import classify_error
@@ -116,6 +116,7 @@ def enqueue_download(
         raise RuntimeError("Workers are shutting down")
     if _queue.full():
         raise RuntimeError("Download queue is full")
+    cookie_source = authorized_cookie_source(cookie_source)
     task_id = task_id or str(uuid.uuid4())
     selected_format = format_id or ("audio-mp3" if fmt == "audio" else "video-best")
     _queue.put((task_id, video_url, fmt, output_dir, selected_format, cookie_source))
@@ -206,6 +207,11 @@ def _worker() -> None:
                 got_item = False
                 continue
             engine = resolve_engine()
+            # Consent can be revoked while a task waits in the persisted queue.
+            cookie_source = authorized_cookie_source(cookie_source)
+            with _state_lock:
+                _history[task_id]["cookie_source"] = cookie_source
+                _save_history()
             filename = download_with_cookie_fallback(
                 engine,
                 url,

@@ -10,11 +10,13 @@ from pathlib import Path
 from typing import Callable
 
 from .error_mapping import is_browser_cookie_error
+from .config import authorized_cookie_source
 
 
 PROGRESS_PREFIX = "__DR_PROGRESS__"
 FILE_PREFIX = "__DR_FILE__"
 TRANSIENT_ATTEMPTS = 3
+FORMAT_ID_PATTERN = r"^[A-Za-z0-9_.:-]{1,128}$"
 
 
 def resolve_node_path() -> str | None:
@@ -68,17 +70,24 @@ def build_command(
         if not any((Path(ffmpeg) / name).is_file() for name in ("ffmpeg.exe", "ffmpeg")):
             raise RuntimeError("FFmpeg is unavailable")
         command += ["--ffmpeg-location", ffmpeg]
+    cookie_source = authorized_cookie_source(cookie_source)
     if cookie_source != "none":
         command += ["--cookies-from-browser", cookie_source]
     # Prefer AAC (m4a) audio: YouTube's "best" audio is Opus, which Windows
     # players, TVs and editors play silently inside an MP4.
     if format_id == "video-best":
         command += ["--format", "bv*+ba[ext=m4a]/bv*+ba/b", "--merge-output-format", "mp4"]
+    elif format_id == "video-compatible":
+        # Every branch requires H.264 and AAC; remux also covers already-muxed sources.
+        command += [
+            "--format", "bv[vcodec~='^(avc1|avc3|h264)']+ba[ext=m4a][acodec~='^(mp4a|aac)']/b[vcodec~='^(avc1|avc3|h264)'][acodec~='^(mp4a|aac)']",
+            "--merge-output-format", "mp4", "--remux-video", "mp4",
+        ]
     elif format_id == "audio-mp3":
         command += ["--format", "bestaudio/best", "--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K"]
     elif format_id == "audio-original":
         command += ["--format", "bestaudio/best"]
-    elif str(format_id).strip():
+    elif isinstance(format_id, str) and re.fullmatch(FORMAT_ID_PATTERN, format_id):
         # A concrete stream chosen from the inspect list. Merge best audio so
         # video-only streams keep sound; yt-dlp's default no-audio-multistreams
         # leaves audio-only or already-muxed streams untouched. Works for the
@@ -143,6 +152,7 @@ def inspect_with_engine(executable: str | Path, url: str, cookie_source: str) ->
         "--js-runtimes",
         node_runtime_argument(),
     ]
+    cookie_source = authorized_cookie_source(cookie_source)
     if cookie_source != "none":
         command += ["--cookies-from-browser", cookie_source]
     command.append(url)
