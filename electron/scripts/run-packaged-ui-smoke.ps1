@@ -3,6 +3,16 @@ param([string]$ApplicationPath, [string]$InstallerPath)
 $ErrorActionPreference = "Stop"
 $electronRoot = Split-Path -Parent $PSScriptRoot
 
+function Start-PackagedApplication([string]$Application, [string[]]$Arguments) {
+    $nodeMode = $env:ELECTRON_RUN_AS_NODE
+    try {
+        # Codex's host flag would run the packaged Electron executable as Node.
+        Remove-Item Env:ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue
+        Start-Process -FilePath $Application -ArgumentList $Arguments -WindowStyle Hidden -PassThru
+    }
+    finally { $env:ELECTRON_RUN_AS_NODE = $nodeMode }
+}
+
 function Assert-ContainedFile([string]$Directory, [string]$Filename) {
     $root = [System.IO.Path]::GetFullPath($Directory).TrimEnd("\", "/") + [System.IO.Path]::DirectorySeparatorChar
     if (-not [System.IO.Path]::GetFullPath($Filename).StartsWith($root, [System.StringComparison]::OrdinalIgnoreCase)) {
@@ -82,7 +92,7 @@ $config = [ordered]@{
 $arguments = @("--remote-debugging-port=$port", "--user-data-dir=`"$dataDirectory`"")
 $process = $null
 try {
-    $process = Start-Process -FilePath $application -ArgumentList $arguments -WindowStyle Hidden -PassThru
+    $process = Start-PackagedApplication $application $arguments
     $uiJson = node (Join-Path $PSScriptRoot "packaged-ui-smoke.mjs") $port $outputDirectory $artifactDirectory
     if ($LASTEXITCODE -ne 0) { throw "Packaged UI smoke failed with exit code $LASTEXITCODE" }
     $uiText = $uiJson -join "`n"

@@ -69,3 +69,16 @@ def test_runner_refuses_a_missing_explicit_installer_before_starting(tmp_path):
     assert result.returncode != 0
     assert "Required packaged artifact is unavailable" in result.stderr
     assert str(missing).replace(" ", "") in "".join(result.stderr.split())
+
+
+def test_launcher_clears_host_node_mode_only_for_the_child(tmp_path):
+    child = tmp_path / "child.ps1"
+    output = tmp_path / "child-mode.txt"
+    child.write_text("[System.IO.File]::WriteAllText($args[0], [string][bool](Test-Path Env:ELECTRON_RUN_AS_NODE))", encoding="utf-8")
+    result = run_helper(f"""$env:ELECTRON_RUN_AS_NODE = '1'
+$process = Start-PackagedApplication (Join-Path $PSHOME 'powershell.exe') @('-NoProfile', '-File', '"{child.as_posix()}"', '"{output.as_posix()}"')
+$process.WaitForExit()
+if ($env:ELECTRON_RUN_AS_NODE -ne '1') {{ throw 'Launcher changed the parent environment' }}
+""")
+    assert result.returncode == 0, result.stderr
+    assert output.read_text(encoding="utf-8") == "False"
