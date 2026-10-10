@@ -1,4 +1,5 @@
 electron/node_modules/
+electron/.deps-stamp.json
 electron/dist/
 backend/__pycache__/
 tests/__pycache__/
@@ -7,3 +8,27 @@ tests/__pycache__/
 backend/config.json
 backend/history.json
 logs/
+.codex-pytest-*/
+.pytest-*/
+*.db
+*.db-shm
+*.db-wal
+build/pyinstaller/
+electron/release/
+.smoke-downloads/
+electron/resources/backend/
+artifacts/quality/
+electron/test-artifacts/
+
+# Local QA, caches, private configuration, and generated runtimes
+.audit-*/
+.codebase-memory/
+.package-test-data/
+.superpowers/
+.pytest_cache/
+config.json
+*.bak
+electron/resources/node/
+electron/resources/ffmpeg/
+electron/release-qa*/
+/relative-downloads/

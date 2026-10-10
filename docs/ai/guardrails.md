@@ -1,0 +1,37 @@
+# Guardrails de ingeniería IA
+
+- No afirmar éxito sin verificación fresca.
+- No producción sin prueba roja previa.
+- No borrar datos ni registrar secretos.
+- No aceptar rutas arbitrarias del renderer.
+- No usar shell para procesos externos si `spawn` basta.
+- No añadir dependencias sin necesidad demostrada.
+- Auditar dependencias de producción y desarrollo con `npm audit --prefix electron --audit-level=moderate`; no suprimir avisos ni aplicar `npm audit fix --force` sin analizar compatibilidad. Un override transitivo requiere prueba del consumidor real y lockfile reproducible.
+- Preservar instalación y ejecución directa en Windows con runtimes incluidos. Una VM limpia o un equipo físico limpio comprueban independencia del entorno de desarrollo; nunca son requisitos de uso.
+- No cambiar contratos sin pruebas y documentación.
+- Todo error visible debe explicar causa y acción.
+- Todo cambio debe dejar una prueba ejecutable.
+- Firma, hashes y rollback son obligatorios para publicar.
+- Consultar `docs/ai/change-ledger.md` antes de corregir un defecto; si su prueba ya pasa, no repetir la corrección.
+- No ampliar `scope-in` ni implementar `scope-out` sin ADR y aprobación de producto.
+- No declarar un criterio de éxito sin umbral y evidencia reproducible.
+- Ante ambigüedad de producto, detenerse y registrar una decisión; no inventar comportamiento.
+- Ante fallo parcial, preservar datos, versión anterior y diagnóstico redactado.
+- Leer y obedecer `docs/engineering/project-dna.md`; es un contrato bloqueante.
+- Producción opera fail-closed: nunca cambiar silenciosamente de motor, runtime, ruta, formato, UI o comportamiento.
+- Prohibidos fallbacks, placeholders, `TODO`, `FIXME`, `NotImplementedError` y pantallas de sustitución en producción.
+- Prohibido usar mocks, stubs, monkeypatches o simulaciones como evidencia de aceptación, E2E o release.
+- Un doble controlado puede aislar una unidad, pero su resultado solo demuestra esa unidad y debe complementarse con evidencia real del nivel de aceptación.
+- Obedecer todos los `QA-GATE-*` de `docs/engineering/project-dna.md`; una IA no puede omitirlos, reinterpretarlos como recomendación ni marcar un hallazgo abierto como resuelto sin evidencia fresca.
+- Mantener una sola identidad de artefacto desde build hasta publicación; toda recompilación reinicia pruebas, firma y aprobación.
+- Separar el gate unsigned previo a SignPath del gate post-SignPath: el primero siempre registra `publishable: false` y nunca exige Authenticode; el segundo empieza al recibir el artefacto firmado y valida Authenticode `Valid`.
+- Asociar la evidencia de cada etapa al commit, artifact-id y SHA-256 exactos; no mezclar resultados de runs, configuraciones o artefactos diferentes.
+- No integrar en `main` fuera de Pull Request ni eludir branch protection, CODEOWNERS, checks o aprobación humana.
+- No sustituir SignPath Foundation por un certificado CSC local en una release pública.
+- Publicar únicamente el hash firmado que atravesó el gate completo y recibió aprobación humana final.
+- Ante un defecto publicado, ejecutar roll-forward firmado desde el último tag bueno; no forzar downgrade ni reutilizar firma o evidencia.
+- Aplicar [experiencia confiable](../product/experience-reliability.md): sin conexión, porcentajes, tamaños, compatibilidad ni éxito de guardado ficticios; errores con causa/recuperación ES/EN, consentimiento confirmado y revocable.
+- Validar estimated_bytes estrictamente en IPC/API; preservar preflight, permisos, formato permitido y protección de archivos. El aviso de enlace repetido no lo prohíbe.
+- ADR-003 aprueba búsqueda/filtro/aviso local; el [backlog diferido](../product/backlog.md) no autoriza pegado múltiple, reordenar, pausar/reanudar, nube, IA o reescritura.
+- Consentimiento backend es cookie_consent estrictamente true y misma fuente persistida; revalidar en cola/retry/worker/comando y tras awaits de validación en UI. Revocación fallida bloquea lecturas nuevas UI, sin prometer modificación backend o persistencia tras reinicio.
+- Transportar errores IPC/contextBridge como rechazo simple message/detail y leer reason.detail; no asumir conservación de propiedades personalizadas de Error. Código desconocido recibe causa/recuperación seguras ES/EN.

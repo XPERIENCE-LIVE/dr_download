@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "changes": [
+    {
+      "id": "US-062",
+      "status": "open",
+      "fingerprint": "truthful-status-session-draft-v1",
+      "regression_tests": ["does not announce a ready engine before a successful read or after a failed read", "inspection shows indeterminate progress without inventing a percentage", "transfer strip prefers a running download over an earlier queued entry", "keeps the inspected draft and selected format when navigating to settings", "queueing has its own pending phase and offers a direct route to the queue"],
+      "evidence": [],
+      "blocking_reason": "Falta aceptación del paquete real MAN-US-062 ligada al mismo SHA; React aislado no acredita ese nivel."
+    },
+    {
+      "id": "US-063",
+      "status": "open",
+      "fingerprint": "compatible-presets-advisory-space-v1",
+      "regression_tests": ["shows simple presets and size while keeping stream selection advanced", "blocks queueing when the known estimate exceeds available processing space", "test_presets_estimate_both_streams_and_keep_compatible_separate_from_best", "test_compatible_video_filters_codecs_and_remuxes_mp4", "test_download_space_preflight_uses_advisory_estimate", "test_download_rejects_unbounded_or_coerced_size_estimates"],
+      "evidence": [],
+      "blocking_reason": "Falta FFprobe y aceptación del paquete real MAN-US-063 ligada al mismo SHA."
+    },
+    {
+      "id": "US-064",
+      "status": "open",
+      "fingerprint": "translated-cause-recovery-actions-v1",
+      "regression_tests": ["inspection errors show recovery and allow another inspection", "open-file failures are visible on the download card", "English mode translates structured backend failures and all workflow labels", "preserves structured backend failures across the serialized IPC boundary"],
+      "evidence": [],
+      "blocking_reason": "Falta ejecución de errores reales y diagnóstico redactado MAN-US-064 ligada al mismo SHA."
+    },
+    {
+      "id": "US-065",
+      "status": "open",
+      "fingerprint": "confirmed-settings-revocable-consent-v1",
+      "regression_tests": ["settings display a failed save and confirm a successful retry", "failed consent persistence keeps browser access unauthorized", "changing the browser requires fresh consent before reading its session", "revoking consent prevents new cookie reads even when saving fails", "queueing rechecks consent after destination validation completes", "test_browser_requests_require_matching_persisted_consent", "test_retry_resolves_browser_source_from_current_consent", "test_queued_download_obeys_revoked_or_changed_consent", "test_engine_commands_cannot_read_a_revoked_browser_session"],
+      "evidence": [],
+      "blocking_reason": "Falta evidencia de persistencia/revocación real MAN-US-065 ligada al mismo SHA."
+    },
+    {
+      "id": "US-066",
+      "status": "open",
+      "fingerprint": "local-history-search-repeat-warning-v1",
+      "regression_tests": ["history search and state filter narrow the displayed downloads", "warns about a repeated link while allowing an intentional new copy"],
+      "evidence": [],
+      "blocking_reason": "Falta aceptación del paquete real MAN-US-066 y hashes de archivos preservados ligados al mismo SHA."
+    },
+    {
+      "id": "BUG-001",
+      "status": "open",
+      "fingerprint": "output-directory-preflight-v1",
+      "regression_tests": [
+        "test_ensure_output_directory_creates_missing_directory",
+        "validates the destination before queueing"
+      ],
+      "evidence": [],
+      "blocking_reason": "No existe evidencia JSON aprobatoria ligada al mismo SHA."
+    },
+    {
+      "id": "GAP-US-050-NODE",
+      "status": "open",
+      "fingerprint": "bundled-node-runtime-v1",
+      "regression_tests": [
+        "test_build_command_uses_bundled_node_runtime",
+        "uses the packaged Node runtime instead of a machine installation"
+      ],
+      "evidence": [],
+      "blocking_reason": "Falta evidencia de instalación Windows limpia (equipo físico o VM, sin Python/Node externos) y manifiesto de runtime ligado al artefacto."
+    },
+    {
+      "id": "GAP-US-041-ELECTRON",
+      "status": "open",
+      "fingerprint": "electron-security-module-v1",
+      "regression_tests": [
+        "electron-security.test.js",
+        "ipc-contract.test.js"
+      ],
+      "evidence": [],
+      "blocking_reason": "Falta prueba empaquetada de abuso y evidencia aprobatoria del mismo SHA."
+    },
+    {
+      "id": "GAP-US-043-ROTATION",
+      "status": "open",
+      "fingerprint": "diagnostics-redaction-rotation-v1",
+      "regression_tests": [
+        "test_logging_uses_data_directory_and_redacts_sensitive_values",
+        "diagnostics.test.js"
+      ],
+      "evidence": [],
+      "blocking_reason": "Falta exportación empaquetada real y escaneo archivado del mismo SHA."
+    },
+    {
+      "id": "QUALITY-001",
+      "status": "open",
+      "fingerprint": "executable-contract-and-quality-gates-v1",
+      "regression_tests": [
+        "test_contract_validator.py",
+        "test_quality_gate_scripts.py",
+        "tools/quality-gate.ps1 -Level pr"
+      ],
+      "evidence": [],
+      "blocking_reason": "El release gate actual no es aprobatorio y la evidencia no está ligada a una release firmada."
+    }
+  ]
+}
