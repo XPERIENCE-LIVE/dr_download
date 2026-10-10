@@ -25,6 +25,18 @@ CI detectó ausencia de `@emnapi/core` y `@emnapi/runtime` 1.11.3 después de qu
 
 La auditoría previa está conservada localmente en `artifacts/quality/npm-audit-moderate-before.json`. `npm ci` con npm 10.9.9 completó una instalación nueva con código 0. Las auditorías posteriores de todo el árbol y de producción registran cero vulnerabilidades en `artifacts/quality/npm-audit-moderate-after.json` y `npm-audit-production-after.json`. Las tres pruebas de compatibilidad pasan después de instalar; `npm ls` confirma YAML 4.3.2, global-agent 4.1.3 y ausencia de sprintf-js. No se actualizaron las otras versiones directas ni el runtime Electron.
 
-El gate PR local del árbol de trabajo pasó: 217 pytest, 96 Jest, contratos, integridad Python, lint, build y audit moderado. La construcción Windows requiere evidencia propia del cambio. Los resultados del [paquete anterior](reliable-workflows-validation.md) permanecen atribuidos a su commit y no certifican este cambio. Cero avisos npm significa cero hallazgos conocidos por esa auditoría en ese momento, no una garantía de ausencia de defectos o una auditoría completa de los binarios incluidos.
+El commit de código `bb001f640b1aa7dc9539aabc8a6e266d04199dbe` pasó [CI quality-pr](https://github.com/XPERIENCE-LIVE/dr_download/actions/runs/38006908793): `npm ci`, 217 pytest, 97 Jest, contratos, integridad Python, lint, build y audit moderado. El gate local repetido después de empaquetar también pasó, con fingerprint `431AECF8EE722309966266DABEC0E88CFF7AAD3E6B177489E5B9004644A3F4EC` en `artifacts/quality/quality-pr.json`. La prueba adicional de peers explica el incremento a 97 Jest.
+
+Los resultados del [paquete anterior](reliable-workflows-validation.md) permanecen atribuidos a su commit y no certifican este cambio. Cero avisos npm significa cero hallazgos conocidos por esa auditoría en ese momento, no una garantía de ausencia de defectos o una auditoría completa de los binarios incluidos.
+
+## Paquete Windows comprobado
+
+Paquete construido desde `bb001f640b1aa7dc9539aabc8a6e266d04199dbe`, Windows 10 x64, Electron 43.7.9. Smoke real del 2026-10-10, 00:00:41–00:04:08 UTC, con perfil nuevo y sin preparar caché del motor: `passed`. Se abrió `win-unpacked` directamente en Windows, se recorrió la interfaz ES/EN y se completaron las tres descargas. FFprobe confirmó MP3 (7 766 828 bytes), AV1/AAC (22 967 690) y MP4 H.264/AAC (37 610 585). Los hashes de siete artefactos y tres descargas se conservaron; no quedaron procesos propios abiertos.
+
+- Instalador de prueba SHA-256: `F4758D334AB17CEB0A7CC73D05E4CC03B13B897CC34225988BF06FEE0822562B`.
+- `app.asar` SHA-256: `09218ACF267B8E9319B946E534206F985E8E0EC4578BF113A9D23BB70DCD3C6B`.
+- Evidencia local: `electron/test-artifacts/packaged-smoke-20261009-180028-061/`, con `evidence.json`, `source-commit.txt`, `ui-result.json` y capturas. Son archivos de ejecución excluidos de Git; este informe no presume su disponibilidad en otro equipo.
+
+El instalador se construyó e identificó, pero no se instaló. Authenticode es `NotSigned`, `installer_lifecycle_verified: false` y `public_release_ready: false`. Este smoke no acredita instalación/desinstalación sin runtimes externos ni la matriz manual completa. Las actualizaciones posteriores de este informe son documentales y no cambian el commit atribuido al paquete.
 
 La ejecución nativa significa instalar y abrir Dr. Download directamente en Windows, con Electron, backend PyInstaller y runtimes incluidos. No significa una reescritura WinUI/C++. Una VM o un equipo físico Windows limpio sirven para comprobar independencia del entorno de desarrollo; la VM nunca es requisito del usuario. El ciclo del instalador y la firma siguen pendientes de su propia evidencia.

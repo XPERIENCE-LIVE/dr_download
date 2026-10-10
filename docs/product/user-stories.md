@@ -374,7 +374,7 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Épica:** E6 — Distribución comercial.
 - **Persona:** cliente con un Windows limpio.
 - **Problema:** el producto no puede depender de herramientas de desarrollo instaladas.
-- **Precondiciones:** NSIS incluye backend PyInstaller, yt-dlp, FFmpeg/FFprobe y runtime JavaScript requerido.
+- **Precondiciones:** NSIS incluye backend PyInstaller, FFmpeg/FFprobe y Node. El primer arranque sin motor yt-dlp verificado requiere red para obtenerlo y comprobar su hash.
 - **Flujo principal:** instalar por usuario → iniciar Electron → health check backend/motor → inspeccionar y descargar.
 - **Flujos alternativos:** recurso empaquetado ausente bloquea release con diagnóstico; instalación previa se actualiza conservando datos.
 - **Given/When/Then:** Given Windows sin Python/Node, When instala e inicia, Then backend y motor funcionan. Given recurso requerido ausente, When se ejecuta smoke, Then release falla antes de publicar.
