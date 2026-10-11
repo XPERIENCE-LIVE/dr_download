@@ -36,6 +36,8 @@ La restricción de recursos del mantenedor se atiende con runners Windows están
 
 La evidencia `artifacts/quality/installed/evidence.json` registra SO real, imagen, SHA, run, artifact-id, tiempos y códigos de salida. El runner lleva herramientas preinstaladas fuera del `PATH` y usa Windows Server: **no equivale a Windows 10/11 sin runtimes instalados**. Por ello `clean_windows_10_11_verified` y `publishable` permanecen `false`; esta prueba aporta cobertura del instalador sin ocupar una VM en el PC del mantenedor. La matriz de consumo, actualización y roll-forward sigue pendiente. Un fallo de red/YouTube se conserva como fallo, sin simulaciones.
 
+Incluso si falla la inspección o descarga externa, se ejecuta la desinstalación y se comparan los archivos de usuario que realmente existan. `uninstall_verified` y `user_data_preserved` registran ese resultado parcial; `status: failed` e `installer_lifecycle_verified: false` mantienen bloqueado el gate completo. Los hitos `startup-result.json`/`settings-result.json` y `failure-ui.txt`/`failure.png` permiten identificar hasta dónde llegó la UI real y qué error mostró.
+
 ## Configurar firma sin comprar certificado
 
 [SignPath Foundation ofrece firma gratuita para proyectos OSS](https://signpath.org/), sujeta a [sus condiciones y aprobación](https://signpath.org/terms.html). No hay garantía de admisión ni certificado disponible por añadir un workflow. La solicitud corresponde al titular del repositorio; no enviar tokens por chat.

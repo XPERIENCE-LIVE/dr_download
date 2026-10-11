@@ -81,6 +81,12 @@ async function waitFor(expression, timeoutMilliseconds = 120000) {
     if (await evaluate(expression)) return;
     await delay(500);
   }
+  try {
+    await writeFile(path.join(artifactDir, "failure-ui.txt"), await evaluate("document.body.innerText"));
+    await screenshot("failure.png");
+  } catch (error) {
+    console.error(`Could not capture the failed renderer: ${error.message}`);
+  }
   throw new Error(`Timed out waiting for: ${expression}`);
 }
 
@@ -131,6 +137,7 @@ const invalidPathError = await evaluate(`(async () => {
 assert.equal(invalidPathError?.detail?.error_code, "invalid_path", "Real IPC bridge lost the structured directory rejection");
 assert(invalidPathError.detail.recovery, "Real IPC bridge lost the recovery guidance");
 assert.deepEqual(await evaluate("window.drDownload.listDownloads().then(items => items.map(item => item.id))"), initialTasks, "Invalid path queued a download");
+await writeFile(path.join(artifactDir, "startup-result.json"), JSON.stringify({ navigation, engineReady: true, structuredBridgeError: true }, null, 2));
 await screenshot("new-download-es.png");
 const mediaUrl = "https://youtu.be/eOX5BdEGfMk";
 await setValue("#media-url", mediaUrl);
@@ -148,6 +155,7 @@ assert.deepEqual(englishNavigation, ["New download", "Queue", "History", "Settin
 assert.equal(await clickButton("Save changes"), true);
 await waitFor("window.drDownload.getConfig().then(config => config.language === 'en')", 10000);
 await waitFor("document.body.innerText.includes('Changes saved')", 10000);
+await writeFile(path.join(artifactDir, "settings-result.json"), JSON.stringify({ englishNavigation, savedLanguage: "en" }, null, 2));
 assert.equal(await clickButton("About"), true);
 await waitFor("[...document.querySelectorAll('h1')].find(item => item.getClientRects().length)?.textContent === 'About'");
 assert.equal(await clickButton("New download"), true);

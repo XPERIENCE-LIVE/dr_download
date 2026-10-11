@@ -44,6 +44,7 @@ $evidence = [ordered]@{
     environment_limit = "Fresh GitHub Windows Server runner; development tools installed but excluded from PATH"
     started_at_utc = (Get-Date).ToUniversalTime().ToString("o")
     install_exit_code = $null; uninstall_exit_code = $null
+    uninstall_verified = $false; user_data_preserved = $false
     installer_lifecycle_verified = $false; preserved_files = @()
 }
 $originalPath = $env:PATH
@@ -85,30 +86,51 @@ try {
     $files = @((Join-Path $dataDirectory "config.json"), (Join-Path $dataDirectory "downloads.db")) + @($ui.downloads.path)
     foreach ($file in $files) {
         if ((Get-Item -LiteralPath $file).Length -le 0) { throw "Missing persisted user data: $file" }
-        $evidence.preserved_files += [ordered]@{ path = $file; sha256 = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash }
     }
-    $uninstaller = Join-Path $evidenceDirectory "Uninstall Dr. Download.exe"
-    Copy-Item -LiteralPath (Join-Path $installDirectory "Uninstall Dr. Download.exe") -Destination $uninstaller
-    $evidence.uninstaller_sha256 = (Get-FileHash -LiteralPath $uninstaller -Algorithm SHA256).Hash
-    # _? prevents NSIS spawning an unobserved temporary copy; this process returns the actual exit code.
-    $evidence.uninstall_exit_code = Invoke-Nsis $uninstaller "/S /currentuser _?=$installDirectory"
-    $deadline = (Get-Date).AddSeconds(60)
-    while ((Test-Path -LiteralPath $application) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
-    if ((Test-Path -LiteralPath $application) -or (Test-Path -LiteralPath (Join-Path $installDirectory "resources")) -or (Get-InstallationEntries).Count -gt 0) { throw "Uninstall left application, runtimes or registry entries" }
-    foreach ($shortcut in $shortcuts) {
-        if (Test-Path -LiteralPath $shortcut) { throw "Uninstall left a shortcut" }
-    }
-    foreach ($file in $evidence.preserved_files) {
-        if ((Get-FileHash -LiteralPath $file.path -Algorithm SHA256).Hash -ne $file.sha256) { throw "Uninstall changed user data: $($file.path)" }
-    }
-    if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $ExpectedSha256) { throw "Installer changed during test" }
-    $evidence.installer_lifecycle_verified = $true
     $evidence.status = "passed"
 }
 catch { $evidence.failure = $_.Exception.Message; throw }
 finally {
-    $env:PATH = $originalPath
-    $evidence.finished_at_utc = (Get-Date).ToUniversalTime().ToString("o")
-    $evidence.installation_started = $installationStarted
-    $evidence | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $evidenceDirectory "evidence.json") -Encoding utf8
+    try {
+        $installedUninstaller = Join-Path $installDirectory "Uninstall Dr. Download.exe"
+        if ($installationStarted -and (Test-Path -LiteralPath $installedUninstaller)) {
+            # Exercise uninstall even when the external media smoke fails; keep that gate failed.
+            $files = @((Join-Path $dataDirectory "config.json"), (Join-Path $dataDirectory "downloads.db"))
+            $downloads = Join-Path $evidenceDirectory "ui/downloads"
+            if (Test-Path -LiteralPath $downloads) { $files += @(Get-ChildItem -LiteralPath $downloads -File -Recurse | ForEach-Object { $_.FullName }) }
+            foreach ($file in ($files | Where-Object { Test-Path -LiteralPath $_ -PathType Leaf })) {
+                $evidence.preserved_files += [ordered]@{ path = $file; sha256 = (Get-FileHash -LiteralPath $file -Algorithm SHA256).Hash }
+            }
+            $uninstaller = Join-Path $evidenceDirectory "Uninstall Dr. Download.exe"
+            Copy-Item -LiteralPath $installedUninstaller -Destination $uninstaller
+            $evidence.uninstaller_sha256 = (Get-FileHash -LiteralPath $uninstaller -Algorithm SHA256).Hash
+            # _? prevents NSIS spawning an unobserved temporary copy; observe the actual exit code.
+            $evidence.uninstall_exit_code = Invoke-Nsis $uninstaller "/S /currentuser _?=$installDirectory"
+            $deadline = (Get-Date).AddSeconds(60)
+            while ((Test-Path -LiteralPath $installDirectory) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 500 }
+            if ((Test-Path -LiteralPath $installDirectory) -or (Get-InstallationEntries).Count -gt 0) { throw "Uninstall left installed files or registry entries" }
+            foreach ($shortcut in $shortcuts) {
+                if (Test-Path -LiteralPath $shortcut) { throw "Uninstall left a shortcut" }
+            }
+            foreach ($file in $evidence.preserved_files) {
+                if ((Get-FileHash -LiteralPath $file.path -Algorithm SHA256).Hash -ne $file.sha256) { throw "Uninstall changed user data: $($file.path)" }
+            }
+            if ((Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -ne $ExpectedSha256) { throw "Installer changed during test" }
+            $evidence.uninstall_verified = $true
+            $evidence.user_data_preserved = $evidence.preserved_files.Count -gt 0
+            $evidence.installer_lifecycle_verified = $evidence.status -eq "passed"
+        }
+        if ($evidence.status -eq "passed" -and -not $evidence.uninstall_verified) { throw "Uninstall was not verified" }
+    }
+    catch {
+        $evidence.status = "failed"
+        $evidence.failure = "$($evidence.failure); Uninstall validation: $($_.Exception.Message)"
+        throw
+    }
+    finally {
+        $env:PATH = $originalPath
+        $evidence.finished_at_utc = (Get-Date).ToUniversalTime().ToString("o")
+        $evidence.installation_started = $installationStarted
+        $evidence | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath (Join-Path $evidenceDirectory "evidence.json") -Encoding utf8
+    }
 }

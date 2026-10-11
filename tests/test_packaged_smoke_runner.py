@@ -13,6 +13,31 @@ POWERSHELL = shutil.which("powershell")
 pytestmark = pytest.mark.skipif(not POWERSHELL, reason="Windows packaged smoke uses PowerShell")
 
 
+def test_ui_timeout_preserves_visible_failure_for_diagnosis(tmp_path):
+    node = shutil.which("node")
+    assert node, "Node is required by the developer test suite"
+    source = f"""
+const fs = require('node:fs');
+const {{ writeFile }} = require('node:fs/promises');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const artifactDir = {json.dumps(str(tmp_path))};
+const evaluate = async () => 'Provider requires authentication';
+const screenshot = async () => {{}};
+const delay = async () => {{}};
+const smoke = fs.readFileSync({json.dumps(str(SMOKE))}, 'utf8');
+const start = smoke.indexOf('async function waitFor(');
+const end = smoke.indexOf('const clickButton', start);
+const waitFor = eval('(' + smoke.slice(start, end).trim() + ')');
+(async () => {{
+  await assert.rejects(waitFor('missing title', 0), /Timed out/);
+  assert.equal(fs.readFileSync(path.join(artifactDir, 'failure-ui.txt'), 'utf8'), 'Provider requires authentication');
+}})().catch(error => {{ console.error(error); process.exitCode = 1; }});
+"""
+    result = subprocess.run([node, "-e", source], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 def run_helper(body: str) -> subprocess.CompletedProcess:
     # Read the real functions without launching Electron or an installer.
     source = f"""$ErrorActionPreference = 'Stop'
