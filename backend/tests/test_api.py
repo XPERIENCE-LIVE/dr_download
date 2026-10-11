@@ -12,6 +12,10 @@ from backend import main  # noqa: E402
 app = main.app
 
 
+def test_startup_restores_recovered_download_workers():
+    assert main.start_download_workers in app.router.on_startup
+
+
 @pytest_asyncio.fixture
 async def client():
     transport = ASGITransport(app=app, raise_app_exceptions=False)
@@ -38,10 +42,13 @@ async def test_post_download(client, tmp_path):
 
 @pytest.mark.asyncio
 async def test_get_progress_endpoint(client):
-    with patch("backend.main.get_progress", return_value=55) as gp:
+    with patch("backend.main.get_progress", return_value=55) as gp, patch(
+        "backend.main.get_history",
+        return_value={"abc": {"status": "done"}},
+    ):
         resp = await client.get("/progress/abc")
         assert resp.status_code == 200
-        assert resp.json() == {"progress": 55}
+        assert resp.json() == {"progress": 55, "status": "done"}
         gp.assert_called_with("abc")
 
 

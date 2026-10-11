@@ -1,0 +1,27 @@
+# Copy de errores ES/EN
+
+Traducir por código estable; causa y recuperación son obligatorias. No usar el mensaje crudo del backend como texto final ni exponer excepciones, rutas privadas, URLs completas, cookies o tokens. Los nombres de botones también se traducen. La operación conserva su código y diagnóstico seguro para soporte.
+
+| Código o contexto UI | Causa ES / EN | Recuperación ES / EN | Acción |
+|---|---|---|---|
+| invalid_path | La carpeta no es válida. / The folder is invalid. | Elige una carpeta o usa Descargas. / Choose a folder or use Downloads. | Elegir carpeta / Choose folder |
+| access_denied | Windows no permite escribir aquí. / Windows cannot write here. | Revisa permisos o elige otra carpeta. / Check permissions or choose another folder. | Elegir carpeta / Choose folder |
+| disk_full | No hay espacio suficiente. / There is not enough free space. | Libera espacio para descargar y procesar, o elige otra carpeta. / Free space for downloading and processing, or choose another folder. | Elegir carpeta; reintentar / Choose folder; retry |
+| browser_locked | El navegador mantiene bloqueada su sesión. / The browser session is locked. | Cierra ventanas y procesos del navegador y vuelve a analizar. / Close browser windows and processes, then inspect again. | Volver a analizar / Inspect again |
+| browser_consent_required | No se autorizó el uso de este navegador. / Access to this browser has not been authorized. | Autoriza el navegador elegido en Ajustes o usa el modo sin cookies. / Allow the selected browser in Settings or use cookie-free mode. | Ajustes; sin cookies / Settings; no cookies |
+| session_required | No se pudo leer la sesión del navegador. / The browser session could not be read. | Inicia sesión, cierra el navegador y autoriza su uso, o prueba sin cookies. / Sign in, close the browser and allow access, or try without cookies. | Ajustes; volver a analizar / Settings; inspect again |
+| age_restricted | El proveedor requiere una cuenta con edad verificada. / The provider requires an age-verified account. | Comprueba acceso con tu cuenta autorizada y revisa la fuente de cookies. / Check access with your authorized account and review the cookie source. | Ajustes; volver a analizar / Settings; inspect again |
+| format_unavailable | El formato elegido no está disponible. / The selected format is unavailable. | Vuelve a analizar y elige un formato disponible. / Inspect again and choose an available format. | Volver a analizar / Inspect again |
+| ffmpeg_missing | Falta un componente para procesar audio y vídeo. / A component needed to process audio and video is missing. | Reinstala la aplicación y conserva un diagnóstico para soporte. / Reinstall the application and save diagnostics for support. | Exportar diagnóstico / Export diagnostics |
+| engine_unavailable | El motor de descarga no está disponible. / The download engine is unavailable. | Reinicia la aplicación; si persiste, exporta un diagnóstico. / Restart the application; if it persists, export diagnostics. | Diagnóstico / Diagnostics |
+| backend desconectado | No se puede conectar al servicio local. / Cannot connect to the local service. | Reintenta o reinicia la aplicación; conserva el borrador mientras esté abierta. / Retry or restart the application; the draft remains while it is open. | Reintentar / Retry |
+| guardado fallido | No se pudieron guardar los ajustes. / Settings could not be saved. | Vuelve a intentar y espera confirmación antes de cerrar. / Retry and wait for confirmation before closing. | Reintentar guardado / Retry save |
+| consentimiento fallido | No se pudo guardar tu autorización. / Your permission could not be saved. | Reintenta o usa el modo sin cookies; aún no se autoriza acceso al navegador. / Retry or use cookie-free mode; browser access is still unauthorized. | Reintentar; sin cookies / Retry; no cookies |
+| apertura fallida | No se pudo abrir el archivo o carpeta. / The file or folder could not be opened. | Comprueba que existe o abre su carpeta; si persiste, exporta diagnóstico. / Check that it exists or open its folder; if it persists, export diagnostics. | Abrir carpeta; diagnóstico / Open folder; diagnostics |
+| fallo desconocido | No se pudo completar esta operación. / This operation could not be completed. | Reintenta; si persiste, exporta un diagnóstico local. / Retry; if it persists, export local diagnostics. | Reintentar; diagnóstico / Retry; diagnostics |
+
+Los contextos UI de la tabla no inventan códigos API. Mantener el código de origen y usar el mensaje seguro desconocido cuando no exista traducción específica. Elegir acciones según la operación: reintento de tarea mantiene ID; reanálisis conserva enlace; error de carpeta conserva inspección. Un disk_full no promete un requisito fijo de 128 MB cuando existe estimación; el umbral está en el [contrato API](../architecture/api-contract.md).
+
+Leer el detalle del rechazo IPC transferible `reason.detail`; no depender de propiedades de una instancia Error que IPC/contextBridge puede eliminar. Un código estructurado desconocido conserva la causa/recuperación genéricas localizadas y no muestra el mensaje crudo como traducción.
+
+Mensajes de operación: **Comprobando conexión / Checking connection**, **Analizando enlace / Inspecting link**, **Agregando a la cola / Adding to queue**, **Guardando ajustes / Saving settings**, **Ajustes guardados / Settings saved**. Solo anunciar éxitos después de confirmación. Unknown: **Tamaño desconocido / Size unknown**. No mostrar claves internas ni fases crudas.

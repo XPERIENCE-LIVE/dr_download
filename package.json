@@ -1,7 +1,9 @@
 {
   "scripts": {
-    "pretest": "[ -d electron/node_modules ] || npm install --prefix electron",
+    "pretest": "node -e \"const fs=require('fs');if(!fs.existsSync('electron/node_modules'))require('child_process').execFileSync(process.platform==='win32'?'npm.cmd':'npm',['install','--prefix','electron'],{stdio:'inherit'})\"",
     "test": "npm --prefix electron test",
-    "lint": "npm --prefix electron run lint"
+    "lint": "npm --prefix electron run lint",
+    "quality:pr": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/quality-gate.ps1 -Level pr",
+    "quality:release": "powershell -NoProfile -ExecutionPolicy Bypass -File tools/quality-gate.ps1 -Level release"
   }
 }

@@ -3,5 +3,8 @@ module.exports = {
     "^.+\\.[jt]sx?$": "babel-jest"
   },
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['@testing-library/jest-dom']
+  setupFilesAfterEnv: ['@testing-library/jest-dom'],
+  moduleNameMapper: {
+    "\\.css$": "identity-obj-proxy"
+  }
 };

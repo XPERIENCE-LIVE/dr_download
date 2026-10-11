@@ -42,6 +42,7 @@ module.exports = [
     },
     rules: {
       ...reactPlugin.configs.recommended.rules,
+      'react/prop-types': 'off',
     },
   },
   {
