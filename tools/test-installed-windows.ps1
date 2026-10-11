@@ -25,7 +25,7 @@ $shortcuts = @(
 function Get-InstallationEntries {
     @(Get-ItemProperty "HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/*",
         "HKLM:/Software/Microsoft/Windows/CurrentVersion/Uninstall/*" -ErrorAction SilentlyContinue |
-        Where-Object { $_.DisplayName -eq "Dr. Download" })
+        Where-Object { $_.DisplayName -match '^Dr[.] Download(?: [0-9].*)?$' })
 }
 if ((Get-InstallationEntries).Count -gt 0) { throw "Existing Dr. Download installation; refusing to modify it" }
 foreach ($path in @($installDirectory, $dataDirectory, $evidenceDirectory) + $shortcuts) {

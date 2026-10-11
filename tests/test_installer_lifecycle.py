@@ -72,3 +72,21 @@ def test_ffmpeg_packaging_rejects_modified_local_binaries(tmp_path):
     assert result.returncode != 0
     assert "FFmpeg SHA-256 mismatch" in result.stdout + result.stderr
     assert (resources / "ffmpeg.exe").read_bytes() == b"not the pinned upstream binary"
+
+
+def test_installation_detection_includes_nsis_versioned_display_names():
+    script = (ROOT / "tools/test-installed-windows.ps1").as_posix()
+    # Isolate registry reads only; this is a unit check, not installer acceptance.
+    source = f"""$ErrorActionPreference = 'Stop'
+$ast = [System.Management.Automation.Language.Parser]::ParseFile('{script}', [ref]$null, [ref]$null)
+$function = $ast.Find({{param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Get-InstallationEntries'}}, $false)
+Invoke-Expression $function.Extent.Text
+function Get-ItemProperty {{
+    @('Dr. Download', 'Dr. Download 2.1.0', 'Dr. Download 2.0.0 (Machine)', 'Dr. Downloader 2.1.0', 'Other') |
+        ForEach-Object {{ [pscustomobject]@{{ DisplayName = $_; DisplayVersion = '2.1.0' }} }}
+}}
+$entries = @(Get-InstallationEntries)
+if ($entries.Count -ne 3 -or $entries.DisplayName -contains 'Dr. Downloader 2.1.0') {{ throw 'NSIS installation detection missed versioned names or matched another product' }}
+"""
+    result = subprocess.run(["powershell", "-NoProfile", "-Command", source], capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout + result.stderr

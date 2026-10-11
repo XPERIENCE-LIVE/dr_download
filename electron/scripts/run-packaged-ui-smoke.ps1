@@ -74,7 +74,7 @@ $identity = @(foreach ($path in $identityPaths) {
     [ordered]@{ path = $path; bytes = (Get-Item -LiteralPath $path).Length; sha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash }
 })
 $evidence = [ordered]@{
-    schema = 2; status = "failed"; failure = $null; kind = "win-unpacked-real-ui"
+    schema = 2; status = "failed"; failure = $null; kind = "packaged-real-ui"
     artifacts = $identity
     installer_authenticode = (Get-AuthenticodeSignature -LiteralPath $installer).Status.ToString()
     installer_lifecycle_verified = $false
