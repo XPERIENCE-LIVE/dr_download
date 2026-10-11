@@ -83,7 +83,7 @@ PROHIBITED_PRODUCTION_PATTERNS = (
 
 IGNORED_PARTS = {
     ".git",
-    ".pytest-tmp",
+    "build",
     ".venv",
     "node_modules",
     "dist",

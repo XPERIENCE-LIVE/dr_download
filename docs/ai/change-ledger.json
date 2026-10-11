@@ -92,6 +92,7 @@
       "regression_tests": [
         "test_contract_validator.py",
         "test_quality_gate_scripts.py",
+        "test_pytest_hygiene.py",
         "tools/quality-gate.ps1 -Level pr"
       ],
       "evidence": [],

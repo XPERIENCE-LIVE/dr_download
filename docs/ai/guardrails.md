@@ -6,6 +6,7 @@
 - No aceptar rutas arbitrarias del renderer.
 - No usar shell para procesos externos si `spawn` basta.
 - No añadir dependencias sin necesidad demostrada.
+- No dejar salidas generadas en la raíz ni junto al código. Temporales y caché de pytest viven en `build/` (`conftest.py` lo impone); no pasar `--basetemp` dentro del repositorio salvo `build/pytest-<nombre>` para ejecuciones paralelas. Cualquier otra salida va a una carpeta ignorada ya existente (`build/`, `artifacts/quality`, `electron/dist`, `electron/release`, `electron/test-artifacts`) o al directorio temporal del sistema; no crear carpetas nuevas por ejecución.
 - Auditar dependencias de producción y desarrollo con `npm audit --prefix electron --audit-level=moderate`; no suprimir avisos ni aplicar `npm audit fix --force` sin analizar compatibilidad. Un override transitivo requiere prueba del consumidor real y lockfile reproducible.
 - Preservar instalación y ejecución directa en Windows con runtimes incluidos. Una VM limpia o un equipo físico limpio comprueban independencia del entorno de desarrollo; nunca son requisitos de uso.
 - No cambiar contratos sin pruebas y documentación.

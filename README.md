@@ -53,11 +53,13 @@ npm run quality:release
 No existen opciones para omitir pasos. La evidencia se escribe en `artifacts/quality` y solo es válida para el commit y configuración declarados.
 
 ```powershell
-python -m pytest -q --basetemp .pytest-local
+python -m pytest -q
 npm test --prefix electron -- --runInBand
 npm run lint --prefix electron
 npm run build --prefix electron
 ```
+
+Pytest escribe sus temporales en `build/pytest-tmp` y su caché en `build/pytest-cache`, se ejecute desde la carpeta que sea. Para ejecuciones paralelas usa `--basetemp=build/pytest-<nombre>`; cualquier otro `--basetemp` dentro del repositorio se rechaza. La raíz solo contiene archivos versionados.
 
 Prueba real autorizada (primero inspección, luego descarga opcional):
 

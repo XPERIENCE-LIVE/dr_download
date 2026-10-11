@@ -8,12 +8,11 @@ tests/__pycache__/
 backend/config.json
 backend/history.json
 logs/
-.codex-pytest-*/
-.pytest-*/
 *.db
 *.db-shm
 *.db-wal
 build/pyinstaller/
+build/pytest-*/
 electron/release/
 .smoke-downloads/
 electron/resources/backend/
@@ -25,7 +24,6 @@ electron/test-artifacts/
 .codebase-memory/
 .package-test-data/
 .superpowers/
-.pytest_cache/
 config.json
 *.bak
 electron/resources/node/
