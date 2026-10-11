@@ -75,7 +75,7 @@ try {
         $version = (Get-Content -LiteralPath "electron/package.json" -Raw | ConvertFrom-Json).version
         $installer = Join-Path $projectRoot "electron/release/Dr-Download-Setup-$version-x64.exe"
         & (Join-Path $projectRoot "tools/test-installed-windows.ps1") -InstallerPath $installer `
-            -ExpectedSha256 (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
+            -ExpectedSha256 (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash -Verification downloads
     }
 
     $status = "passed"

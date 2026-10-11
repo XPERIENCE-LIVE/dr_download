@@ -5,6 +5,8 @@ import path from "node:path";
 const port = Number(process.argv[2] || 9223);
 const outputDir = process.argv[3];
 const artifactDir = process.argv[4] || path.dirname(outputDir || ".");
+const verification = process.argv[5] || "downloads";
+assert(["downloads", "startup"].includes(verification), "Unknown smoke verification scope");
 assert(outputDir, "Usage: node scripts/packaged-ui-smoke.mjs <debug-port> <output-dir>");
 await mkdir(outputDir, { recursive: true });
 
@@ -162,6 +164,15 @@ assert.equal(await clickButton("New download"), true);
 await waitFor("Boolean(document.querySelector('#media-url'))", 30000);
 assert.equal(await evaluate("document.querySelector('#media-url').value"), mediaUrl, "URL draft was lost while navigating");
 assert.equal(await evaluate("document.querySelector('label[for=media-url]').textContent"), "Video link");
+if (verification === "startup") {
+  await screenshot("new-download-en.png");
+  await new Promise(resolve => process.stdout.write(JSON.stringify({
+    navigation, englishNavigation, draftPreserved: true, structuredBridgeError: true,
+    startupOnly: true, tasks: []
+  }, null, 2), resolve));
+  socket.close();
+  process.exit(0);
+}
 assert.equal(await clickButton("Inspect link"), true);
 await waitFor("document.body.innerText.includes('Rammstein - Wilder Wein Instrumental Cover')", 120000);
 const presets = await evaluate("[...document.querySelector('.media-controls select').options].map(option => option.value)");

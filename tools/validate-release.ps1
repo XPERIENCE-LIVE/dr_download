@@ -23,7 +23,9 @@ if (-not $env:CANDIDATE_ARTIFACT_ID -or -not $env:SIGNING_REQUEST_ID -or -not $e
 }
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $unsigned = Get-Content -LiteralPath (Join-Path $projectRoot "artifacts/quality/installed/evidence.json") -Raw | ConvertFrom-Json
-if ($unsigned.status -ne "passed" -or -not $unsigned.installer_lifecycle_verified -or $unsigned.commit -ne $env:GITHUB_SHA -or $unsigned.run_id -ne $env:GITHUB_RUN_ID -or $unsigned.artifact_id -ne $env:CANDIDATE_ARTIFACT_ID) {
+if ($unsigned.status -ne "passed" -or -not $unsigned.installer_lifecycle_verified -or
+    $unsigned.verification -ne "downloads" -or -not $unsigned.download_smoke_verified -or
+    $unsigned.commit -ne $env:GITHUB_SHA -or $unsigned.run_id -ne $env:GITHUB_RUN_ID -or $unsigned.artifact_id -ne $env:CANDIDATE_ARTIFACT_ID) {
     throw "Unsigned installer evidence does not match this build"
 }
 if ($installer.Name -ne [System.IO.Path]::GetFileName($unsigned.installer) -or

@@ -83,7 +83,7 @@ jobs:
         run: |
           $installers = @(Get-ChildItem artifacts/candidate -Filter 'Dr-Download-Setup-*-x64.exe' -File)
           if ($installers.Count -ne 1) { throw 'Expected exactly one NSIS candidate' }
-          tools/test-installed-windows.ps1 -InstallerPath $installers[0].FullName -ExpectedSha256 $env:CANDIDATE_SHA256
+          tools/test-installed-windows.ps1 -InstallerPath $installers[0].FullName -ExpectedSha256 $env:CANDIDATE_SHA256 -Verification startup
       - if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

@@ -28,6 +28,7 @@
 - Separar el gate unsigned previo a SignPath del gate post-SignPath: el primero siempre registra `publishable: false` y nunca exige Authenticode; el segundo empieza al recibir el artefacto firmado y valida Authenticode `Valid`.
 - Asociar la evidencia de cada etapa al commit, artifact-id y SHA-256 exactos; no mezclar resultados de runs, configuraciones o artefactos diferentes.
 - El smoke instalado solo modifica runners desechables de GitHub. Registrar Windows Server y herramientas fuera del PATH tal como son; no declarar Windows 10/11 limpio ni cerrar la matriz por ese resultado.
+- La PR comprueba instalación/arranque/ajustes/desinstalación; el gate release mantiene tres descargas reales. Evidencia `verification: startup` nunca autoriza firma ni se promueve a prueba de descarga, aunque su prueba de instalación pase.
 - No integrar en `main` fuera de Pull Request ni eludir branch protection, CODEOWNERS, checks o aprobación humana.
 - No sustituir SignPath Foundation por un certificado CSC local en una release pública.
 - Publicar únicamente el hash firmado que atravesó el gate completo y recibió aprobación humana final.

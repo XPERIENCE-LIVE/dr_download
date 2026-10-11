@@ -61,6 +61,36 @@ foreach ($outside in @('{root}/downloads-other/result.mp3', '{root}/downloads/..
     assert result.returncode == 0, result.stderr
 
 
+def test_startup_proof_cannot_satisfy_the_full_download_smoke():
+    result = run_helper("""
+$startup = [pscustomobject]@{ startupOnly = $true; tasks = @() }
+$full = [pscustomobject]@{ startupOnly = $false; tasks = @(
+    @{ formatId = 'audio-mp3' }, @{ formatId = 'video-best' }, @{ formatId = 'video-compatible' }) }
+Assert-SmokeResult 'startup' $startup
+Assert-SmokeResult 'downloads' $full
+foreach ($case in @(@('downloads', $startup), @('startup', $full),
+    @('startup', [pscustomobject]@{ startupOnly = 'true'; tasks = @() }),
+    @('downloads', [pscustomobject]@{ startupOnly = $false; tasks = @(@{formatId = 'audio-mp3'}) }))) {
+    $rejected = $false
+    try { Assert-SmokeResult $case[0] $case[1] } catch { $rejected = $true }
+    if (-not $rejected) { throw 'Accepted evidence from a different or incomplete smoke' }
+}
+""")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_cleanup_accepts_a_process_that_exited_after_the_snapshot():
+    result = run_helper("""
+$stale = Get-CimInstance Win32_Process -Filter "ProcessId = $PID" | Select-Object *
+$stale.ProcessId = 2147483647
+if (Get-Process -Id $stale.ProcessId -ErrorAction SilentlyContinue) { throw 'Reserved test PID is unexpectedly alive' }
+# Return a stale snapshot, then use the real Stop-Process command against an absent PID.
+function Get-CimInstance { $stale }
+Stop-OwnedProcess $stale
+""")
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
 @pytest.mark.parametrize("format_id,streams", [
     ("audio-mp3", '@(@{ codec_type = "audio"; codec_name = "mp3" })'),
     ("video-best", '@(@{ codec_type = "audio"; codec_name = "aac" }, @{ codec_type = "video"; codec_name = "h264" })'),

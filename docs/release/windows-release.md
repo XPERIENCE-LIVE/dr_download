@@ -2,7 +2,9 @@
 
 ## Estado de implementación
 
-Esta guía define **contratos objetivo**. El workflow PR construye el NSIS y un job nuevo instala ese artifact-id, ejecuta el smoke real con runtimes incluidos y lo desinstala. `quality-release` separa el gate unsigned, la solicitud real a SignPath, la validación de firma y otra instalación post-firma. La existencia de estos pasos no acredita su ejecución, aprobación ni la matriz Windows 10/11. Ningún PASS de otro SHA se atribuye al candidato actual.
+Esta guía define **contratos objetivo**. El workflow PR construye el NSIS y un job nuevo instala ese artifact-id, comprueba arranque/ajustes reales con runtimes incluidos y lo desinstala. `quality-release` exige además las descargas reales y separa el gate unsigned, la solicitud a SignPath, la validación de firma y otra instalación post-firma. La existencia de estos pasos no acredita su ejecución, aprobación ni la matriz Windows 10/11. Ningún PASS de otro SHA se atribuye al candidato actual.
+
+[Evidencia del 2026-10-11](../qa/windows-installer-validation-2026-10-11.md): instalación/desinstalación reales en GitHub y ejecución nativa en Windows 10, con sus candidatos, resultados y limitaciones.
 
 ## Contrato objetivo de build interno
 
@@ -32,11 +34,13 @@ El workflow `quality-release` construye, solicita firma y conserva candidatos/ev
 
 ## Prueba sin VM local
 
-La restricción de recursos del mantenedor se atiende con runners Windows estándar alojados por GitHub. En PR, `installed-windows` recibe exclusivamente el instalador del job de build; no configura Python ni Node. `tools/test-installed-windows.ps1` rechaza ejecución en el equipo de desarrollo, instalaciones/perfiles existentes y hashes diferentes; reduce `PATH` a Windows antes de instalar. El smoke se conduce con `resources/node/node.exe`, usa el backend/FFmpeg incluidos y comprueba UI ES/EN, IPC y tres descargas reales. Después compara hashes de `config.json`, `downloads.db` y descargas, y verifica eliminación de binarios, runtimes, accesos y registro. Los procesos del smoke se cierran antes de desinstalar.
+La restricción de recursos del mantenedor se atiende con runners Windows estándar alojados por GitHub. En PR, `installed-windows` recibe exclusivamente el instalador del job de build; no configura Python ni Node. `tools/test-installed-windows.ps1` rechaza ejecución en el equipo de desarrollo, instalaciones/perfiles existentes y hashes diferentes; reduce `PATH` a Windows antes de instalar. El smoke se conduce con `resources/node/node.exe` y usa los runtimes incluidos.
+
+La PR fija `-Verification startup`: arranque autenticado/motor listo, UI ES/EN, IPC, guardado real de ajustes, hashes de `config.json`/`downloads.db` y desinstalación completa de directorio, accesos y registro. Su evidencia declara `download_smoke_verified: false`. El smoke nocturno y `quality-gate.ps1 -Level release` conservan la comprobación completa de tres descargas con FFprobe; release fija `-Verification downloads`, también predeterminado del helper. La evidencia startup no satisface el gate post-SignPath, que exige explícitamente `verification: downloads` y `download_smoke_verified: true`. Los procesos del smoke se cierran antes de desinstalar.
 
 La evidencia `artifacts/quality/installed/evidence.json` registra SO real, imagen, SHA, run, artifact-id, tiempos y códigos de salida. El runner lleva herramientas preinstaladas fuera del `PATH` y usa Windows Server: **no equivale a Windows 10/11 sin runtimes instalados**. Por ello `clean_windows_10_11_verified` y `publishable` permanecen `false`; esta prueba aporta cobertura del instalador sin ocupar una VM en el PC del mantenedor. La matriz de consumo, actualización y roll-forward sigue pendiente. Un fallo de red/YouTube se conserva como fallo, sin simulaciones.
 
-Incluso si falla la inspección o descarga externa, se ejecuta la desinstalación y se comparan los archivos de usuario que realmente existan. `uninstall_verified` y `user_data_preserved` registran ese resultado parcial; `status: failed` e `installer_lifecycle_verified: false` mantienen bloqueado el gate completo. Los hitos `startup-result.json`/`settings-result.json` y `failure-ui.txt`/`failure.png` permiten identificar hasta dónde llegó la UI real y qué error mostró.
+Incluso si falla la inspección o descarga externa del smoke completo, se ejecuta la desinstalación y se comparan config, SQLite y los archivos realmente producidos en la carpeta de descargas. `uninstall_verified` y `user_data_preserved` registran ese resultado parcial; `status: failed` e `installer_lifecycle_verified: false` mantienen bloqueado el gate completo. Los hitos `startup-result.json`/`settings-result.json` y `failure-ui.txt`/`failure.png` permiten identificar hasta dónde llegó la UI real y qué error mostró.
 
 ## Configurar firma sin comprar certificado
 

@@ -1,4 +1,5 @@
-param([string]$ApplicationPath, [string]$InstallerPath, [string]$ArtifactDirectory, [string]$UserDataDirectory)
+param([string]$ApplicationPath, [string]$InstallerPath, [string]$ArtifactDirectory, [string]$UserDataDirectory,
+    [ValidateSet("downloads", "startup")][string]$Verification = "downloads")
 
 $ErrorActionPreference = "Stop"
 $electronRoot = Split-Path -Parent $PSScriptRoot
@@ -40,6 +41,32 @@ function Assert-MediaStreams([string]$FormatId, $Probe) {
     else { throw "Unsupported smoke format: $FormatId" }
 }
 
+function Assert-SmokeResult([string]$Verification, $Ui) {
+    if ($Ui.tasks -isnot [array]) { throw "Smoke tasks must be an array" }
+    if ($Verification -eq "startup") {
+        if ($Ui.startupOnly -isnot [bool] -or -not $Ui.startupOnly -or $Ui.tasks.Count -ne 0) {
+            throw "Startup smoke must report its explicit scope without download claims"
+        }
+    }
+    elseif ($Verification -eq "downloads") {
+        if ($Ui.startupOnly -or $Ui.tasks.Count -ne 3 -or (@($Ui.tasks.formatId | Sort-Object -Unique)).Count -ne 3) {
+            throw "Packaged smoke must complete MP3, maximum quality video, and compatible MP4 tasks"
+        }
+    }
+    else { throw "Unknown smoke verification scope" }
+}
+
+function Stop-OwnedProcess($Child) {
+    $live = Get-CimInstance Win32_Process -Filter "ProcessId = $($Child.ProcessId)"
+    if ($live -and $live.CreationDate -eq $Child.CreationDate) {
+        try { Stop-Process -Id $Child.ProcessId -Force -ErrorAction Stop }
+        catch {
+            # A child can exit between the snapshot and Stop-Process.
+            if ($_.FullyQualifiedErrorId -notlike "NoProcessFoundForGivenId,*") { throw }
+        }
+    }
+}
+
 if (-not $ApplicationPath) { $ApplicationPath = Join-Path $electronRoot "release/win-unpacked/Dr. Download.exe" }
 if (-not $InstallerPath) {
     $version = (Get-Content -LiteralPath (Join-Path $electronRoot "package.json") -Raw | ConvertFrom-Json).version
@@ -75,6 +102,7 @@ $identity = @(foreach ($path in $identityPaths) {
 })
 $evidence = [ordered]@{
     schema = 2; status = "failed"; failure = $null; kind = "packaged-real-ui"
+    verification = $Verification
     artifacts = $identity
     installer_authenticode = (Get-AuthenticodeSignature -LiteralPath $installer).Status.ToString()
     installer_lifecycle_verified = $false
@@ -94,15 +122,13 @@ $arguments = @("--remote-debugging-port=$port", "--user-data-dir=`"$dataDirector
 $process = $null
 try {
     $process = Start-PackagedApplication $application $arguments
-    $uiJson = & (Join-Path $resources "node/node.exe") (Join-Path $PSScriptRoot "packaged-ui-smoke.mjs") $port $outputDirectory $artifactDirectory
+    $uiJson = & (Join-Path $resources "node/node.exe") (Join-Path $PSScriptRoot "packaged-ui-smoke.mjs") $port $outputDirectory $artifactDirectory $Verification
     if ($LASTEXITCODE -ne 0) { throw "Packaged UI smoke failed with exit code $LASTEXITCODE" }
     $uiText = $uiJson -join "`n"
     [System.IO.File]::WriteAllText((Join-Path $artifactDirectory "ui-result.json"), $uiText, $utf8)
     $ui = $uiText | ConvertFrom-Json
     $evidence.ui = $ui
-    if ($ui.tasks.Count -ne 3 -or (@($ui.tasks.formatId | Sort-Object -Unique)).Count -ne 3) {
-        throw "Packaged smoke must complete MP3, maximum quality video, and compatible MP4 tasks"
-    }
+    Assert-SmokeResult $Verification $ui
     foreach ($task in $ui.tasks) {
         Assert-ContainedFile $outputDirectory $task.filename
         $mediaFile = Get-Item -LiteralPath $task.filename
@@ -137,8 +163,7 @@ finally {
             $process.Refresh()
             if (-not $process.HasExited) { & taskkill @treeArguments 2>$null | Out-Null }
             foreach ($child in $owned) {
-                $live = Get-CimInstance Win32_Process -Filter "ProcessId = $($child.ProcessId)"
-                if ($live -and $live.CreationDate -eq $child.CreationDate) { Stop-Process -Id $child.ProcessId -Force -ErrorAction Stop }
+                Stop-OwnedProcess $child
             }
             Start-Sleep -Milliseconds 300
             foreach ($child in $owned) {

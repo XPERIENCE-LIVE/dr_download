@@ -1,6 +1,7 @@
 param(
     [Parameter(Mandatory = $true)][string]$InstallerPath,
-    [Parameter(Mandatory = $true)][ValidatePattern('^[a-fA-F0-9]{64}$')][string]$ExpectedSha256
+    [Parameter(Mandatory = $true)][ValidatePattern('^[a-fA-F0-9]{64}$')][string]$ExpectedSha256,
+    [ValidateSet("downloads", "startup")][string]$Verification = "downloads"
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,6 +35,7 @@ foreach ($path in @($installDirectory, $dataDirectory, $evidenceDirectory) + $sh
 New-Item -ItemType Directory -Path $evidenceDirectory | Out-Null
 $evidence = [ordered]@{
     schema = 1; status = "failed"; failure = $null; publishable = $false
+    verification = $Verification; download_smoke_verified = $false
     installer = $installer; sha256 = $ExpectedSha256.ToUpperInvariant()
     commit = $env:GITHUB_SHA; run_id = $env:GITHUB_RUN_ID
     artifact_id = $env:CANDIDATE_ARTIFACT_ID
@@ -80,13 +82,14 @@ try {
     }
     & (Join-Path $projectRoot "electron/scripts/run-packaged-ui-smoke.ps1") `
         -ApplicationPath $application -InstallerPath $installer `
-        -ArtifactDirectory (Join-Path $evidenceDirectory "ui") -UserDataDirectory $dataDirectory
+        -ArtifactDirectory (Join-Path $evidenceDirectory "ui") -UserDataDirectory $dataDirectory -Verification $Verification
     $ui = Get-Content -LiteralPath (Join-Path $evidenceDirectory "ui/evidence.json") -Raw | ConvertFrom-Json
     if ($ui.status -ne "passed") { throw "Installed UI smoke did not pass" }
-    $files = @((Join-Path $dataDirectory "config.json"), (Join-Path $dataDirectory "downloads.db")) + @($ui.downloads.path)
+    $files = @((Join-Path $dataDirectory "config.json"), (Join-Path $dataDirectory "downloads.db")) + @($ui.downloads | ForEach-Object { $_.path })
     foreach ($file in $files) {
         if ((Get-Item -LiteralPath $file).Length -le 0) { throw "Missing persisted user data: $file" }
     }
+    $evidence.download_smoke_verified = $Verification -eq "downloads"
     $evidence.status = "passed"
 }
 catch { $evidence.failure = $_.Exception.Message; throw }
