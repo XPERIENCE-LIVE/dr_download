@@ -40,6 +40,8 @@ Este contrato es normativo para personas, IA, CI y releases. Si una regla no pue
 
 La validación de Authenticode pertenece exclusivamente a `QA-GATE-SIGN-001`, después de recibir el artefacto firmado; nunca forma parte del gate unsigned previo.
 
+Un runner nuevo de GitHub permite probar el NSIS sin VM local. Registrar su SO e imagen reales: Windows Server con herramientas preinstaladas fuera de PATH no acredita la matriz Windows 10/11 sin runtimes externos. Esa cobertura es complementaria y nunca cierra por sí sola aceptación ni publicación.
+
 Un fallo en cualquier `QA-GATE-*` conserva o restablece el estado `blocked`; nunca degrada el requisito ni convierte evidencia parcial en aceptación.
 
 ## Veracidad de experiencia

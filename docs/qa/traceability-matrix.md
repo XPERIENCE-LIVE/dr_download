@@ -30,7 +30,7 @@ Formato: `Historia | contrato | símbolo/componente | prueba actual | evidencia 
 | US-051 | verified update | engine/app updater | checksum + promotion + active wait | E2E-US-051 | 2.1.0 | partial |
 | US-052 | rollback | engine/app updater | reject checksum + retry interval | GAP-US-052-APP | 2.1.0 | partial |
 | US-053 | signed NSIS | electron-builder/release | unsigned NSIS build | Authenticode `Valid` + SHA-256 | 2.1.0 | blocked |
-| US-054 | preservación al desinstalar | NSIS/installed smoke | sin prueba instalada automatizada | MAN-US-054 | 2.1.0 | blocked |
+| US-054 | preservación al desinstalar | NSIS/installed smoke | tools/test-installed-windows.ps1; hashes de config/SQLite/descargas | MAN-US-054 Windows 10/11 pending | 2.1.0 | blocked |
 | US-060 | accesibilidad AA | React/CSS/Electron | flujos React parciales | MAN-US-060 | 2.1.0 | partial |
 | US-061 | interfaz ES/EN | i18n/React/config | cambio de idioma y navegación española | MAN-US-061 | 2.1.0 | partial |
 | US-062 | estado/borrador de sesión | App/NewDownload/TransferStrip | workflow-ux.test.jsx: lectura, inspección, draft, queueing y prioridad; verde pendiente | MAN-US-062 | Unreleased | partial |

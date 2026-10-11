@@ -75,7 +75,11 @@ python -m pip install -r backend/requirements-build.txt
 npm run package:win --prefix electron
 ```
 
-El resultado se crea en `electron/release`. Para una publicación real:
+El resultado se crea en `electron/release`.
+
+Las PR también prueban instalación, inicio real y desinstalación en un runner Windows nuevo de GitHub, sin VM local. El workflow de firma envía el candidato a SignPath y comprueba el retorno. [Configuración, evidencia y límites de Windows Server](docs/release/windows-release.md): no acreditan automáticamente la matriz Windows 10/11 ni habilitan una release.
+
+Para una publicación real:
 
 1. Revisar y, cuando corresponda, actualizar los binarios FFmpeg/FFprobe incluidos y sus hashes.
 2. Completar el flujo SignPath Foundation y validar el artefacto firmado exacto con aprobación humana según los gates normativos.

@@ -15,7 +15,7 @@
     "smoke:packaged-ui": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-packaged-ui-smoke.ps1",
     "prepare:runtime": "node scripts/prepare-node-runtime.js",
     "package:backend": "python -m PyInstaller --clean --noconfirm ../backend/dr-download-backend.spec --distpath resources/backend --workpath ../build/pyinstaller",
-    "package:win": "npm run prepare:runtime && npm run build && npm run package:backend && electron-builder --win nsis --x64 --publish never",
+    "package:win": "powershell -NoProfile -ExecutionPolicy Bypass -File ../tools/prepare-ffmpeg.ps1 && npm run prepare:runtime && npm run build && npm run package:backend && electron-builder --win nsis --x64 --publish never",
     "dist:win": "npm run package:win"
   },
   "dependencies": {

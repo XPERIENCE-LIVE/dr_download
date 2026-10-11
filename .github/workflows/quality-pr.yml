@@ -14,6 +14,9 @@ concurrency:
 
 jobs:
   quality-pr:
+    outputs:
+      candidate-id: ${{ steps.candidate.outputs.artifact-id }}
+      candidate-sha256: ${{ steps.identity.outputs.sha256 }}
     permissions:
       contents: read
     runs-on: windows-latest
@@ -41,4 +44,50 @@ jobs:
         with:
           name: quality-pr-evidence-${{ github.sha }}
           path: artifacts/quality/
+          if-no-files-found: error
+      - run: python -m pip install -r backend/requirements-build.txt
+      - run: npm --prefix electron run package:win
+      - name: Record the built installer hash
+        id: identity
+        shell: powershell
+        run: |
+          $installers = @(Get-ChildItem electron/release -Filter 'Dr-Download-Setup-*-x64.exe' -File)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one built NSIS candidate' }
+          "sha256=$((Get-FileHash -LiteralPath $installers[0].FullName -Algorithm SHA256).Hash)" >> $env:GITHUB_OUTPUT
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        id: candidate
+        with:
+          name: unsigned-windows-${{ github.sha }}
+          retention-days: 1
+          path: electron/release/Dr-Download-Setup-*-x64.exe
+          if-no-files-found: error
+
+  installed-windows:
+    needs: quality-pr
+    permissions:
+      contents: read
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          artifact-ids: ${{ needs.quality-pr.outputs.candidate-id }}
+          path: artifacts/candidate
+          merge-multiple: true
+      - name: Install, run and uninstall the exact NSIS candidate
+        shell: powershell
+        env:
+          CANDIDATE_ARTIFACT_ID: ${{ needs.quality-pr.outputs.candidate-id }}
+          CANDIDATE_SHA256: ${{ needs.quality-pr.outputs.candidate-sha256 }}
+        run: |
+          $installers = @(Get-ChildItem artifacts/candidate -Filter 'Dr-Download-Setup-*-x64.exe' -File)
+          if ($installers.Count -ne 1) { throw 'Expected exactly one NSIS candidate' }
+          tools/test-installed-windows.ps1 -InstallerPath $installers[0].FullName -ExpectedSha256 $env:CANDIDATE_SHA256
+      - if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: installed-windows-evidence-${{ github.sha }}
+          retention-days: 7
+          path: artifacts/quality/installed/
           if-no-files-found: error

@@ -379,7 +379,7 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Flujos alternativos:** recurso empaquetado ausente bloquea release con diagnóstico; instalación previa se actualiza conservando datos.
 - **Given/When/Then:** Given Windows sin Python/Node, When instala e inicia, Then backend y motor funcionan. Given recurso requerido ausente, When se ejecuta smoke, Then release falla antes de publicar.
 - **Prueba unitaria:** `test_build_command_uses_bundled_node_runtime`; `uses the packaged Node runtime instead of a machine installation`.
-- **Prueba de integración:** la construcción NSIS existe, pero instalarla en Windows limpio (equipo físico o VM) permanece pendiente. La VM no es requisito de uso: la aplicación se ejecuta directamente en Windows.
+- **Prueba de integración:** [test-installed-windows.ps1](../../tools/test-installed-windows.ps1) instala el NSIS exacto en un runner nuevo, oculta runtimes externos del PATH y usa el smoke con Node empaquetado. Windows Server con herramientas preinstaladas no acredita Windows 10/11 limpio; ese caso permanece pendiente. La aplicación se ejecuta directamente en Windows.
 - **Prueba E2E:** `MAN-US-050`: instalación limpia Windows 10/11, audio y vídeo reales sin runtimes externos.
 - **Evidencia requerida:** inventario previo de software, log de instalación, health check y archivos reproducibles.
 - **Riesgos:** falta ejecutar la matriz final en Windows limpio sin Node/Python externos, físico o virtual.
@@ -443,7 +443,7 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Flujos alternativos:** proceso activo bloquea desinstalación con acción clara; ruta personalizada conserva archivos; configuración se elimina solo mediante una opción explícita.
 - **Given/When/Then:** Given un archivo descargado antes de desinstalar, When se ejecuta el desinstalador, Then el archivo permanece idéntico y los binarios se eliminan. Given una descarga activa, When se solicita desinstalar, Then se detiene de forma segura antes de modificar archivos instalados.
 - **Prueba unitaria:** no aplica al contrato NSIS; la comprobación requiere el instalador exacto.
-- **Prueba de integración:** no existe aún una prueba instalada automatizada; el caso manual US-054 permanece pendiente y bloquea aceptación.
+- **Prueba de integración:** [test-installed-windows.ps1](../../tools/test-installed-windows.ps1) ejecuta NSIS y smoke reales, desinstala y compara hashes de preferencias, SQLite y descargas; comprueba binarios, runtimes, registro y accesos eliminados. Su resultado debe ligarse al artifact-id/SHA/SO observado; no sustituye el caso manual Windows 10/11, todavía pendiente.
 - **Prueba E2E:** `MAN-US-054`: desinstalar el NSIS exacto y comparar el hash del archivo de usuario antes/después.
 - **Evidencia requerida:** hash del instalador, comandos de desinstalación, hash del archivo preservado y ausencia de procesos.
 - **Riesgos:** reglas NSIS demasiado amplias o carpeta de destino dentro del directorio de instalación.

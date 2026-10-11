@@ -1,4 +1,4 @@
-param([string]$ApplicationPath, [string]$InstallerPath)
+param([string]$ApplicationPath, [string]$InstallerPath, [string]$ArtifactDirectory, [string]$UserDataDirectory)
 
 $ErrorActionPreference = "Stop"
 $electronRoot = Split-Path -Parent $PSScriptRoot
@@ -63,9 +63,10 @@ if ($existing) { throw "Selected packaged application is already running; close 
 
 $port = Get-Random -Minimum 12000 -Maximum 22000
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss-fff"
-$artifactDirectory = Join-Path $electronRoot "test-artifacts/packaged-smoke-$stamp"
+if (-not $ArtifactDirectory) { $ArtifactDirectory = Join-Path $electronRoot "test-artifacts/packaged-smoke-$stamp" }
 $outputDirectory = Join-Path $artifactDirectory "downloads"
-$dataDirectory = Join-Path $artifactDirectory "data"
+if (-not $UserDataDirectory) { $UserDataDirectory = Join-Path $artifactDirectory "data" }
+$dataDirectory = $UserDataDirectory
 New-Item -ItemType Directory -Path $outputDirectory | Out-Null
 New-Item -ItemType Directory -Path $dataDirectory | Out-Null
 $utf8 = New-Object System.Text.UTF8Encoding($false)
@@ -93,7 +94,7 @@ $arguments = @("--remote-debugging-port=$port", "--user-data-dir=`"$dataDirector
 $process = $null
 try {
     $process = Start-PackagedApplication $application $arguments
-    $uiJson = node (Join-Path $PSScriptRoot "packaged-ui-smoke.mjs") $port $outputDirectory $artifactDirectory
+    $uiJson = & (Join-Path $resources "node/node.exe") (Join-Path $PSScriptRoot "packaged-ui-smoke.mjs") $port $outputDirectory $artifactDirectory
     if ($LASTEXITCODE -ne 0) { throw "Packaged UI smoke failed with exit code $LASTEXITCODE" }
     $uiText = $uiJson -join "`n"
     [System.IO.File]::WriteAllText((Join-Path $artifactDirectory "ui-result.json"), $uiText, $utf8)

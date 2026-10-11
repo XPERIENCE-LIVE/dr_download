@@ -12,6 +12,7 @@ logs/
 *.db-shm
 *.db-wal
 build/pyinstaller/
+build/ffmpeg-runtime/
 build/pytest-*/
 electron/release/
 .smoke-downloads/

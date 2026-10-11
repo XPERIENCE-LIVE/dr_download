@@ -72,10 +72,10 @@ try {
         npm --prefix electron run package:win
         Assert-LastExitCode "windows-package"
 
-        npm --prefix electron run smoke:packaged-ui
-        Assert-LastExitCode "packaged-ui-smoke"
-
-        & (Join-Path $projectRoot "tools/validate-release.ps1")
+        $version = (Get-Content -LiteralPath "electron/package.json" -Raw | ConvertFrom-Json).version
+        $installer = Join-Path $projectRoot "electron/release/Dr-Download-Setup-$version-x64.exe"
+        & (Join-Path $projectRoot "tools/test-installed-windows.ps1") -InstallerPath $installer `
+            -ExpectedSha256 (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
     }
 
     $status = "passed"
@@ -90,6 +90,7 @@ finally {
         level = $Level
         status = $status
         failure = $failure
+        publishable = $false
         started_at_utc = $startedAt.ToString("o")
         finished_at_utc = (Get-Date).ToUniversalTime().ToString("o")
         workspace_sha256 = Get-WorkspaceSha256

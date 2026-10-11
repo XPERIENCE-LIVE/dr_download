@@ -9,6 +9,8 @@ ACTION_PINS = {
     "actions/setup-python": "a26af69be951a213d495a4c3e4e4022e16d87065",
     "actions/setup-node": "49933ea5288caeca8642d1e84afbd3f7d6820020",
     "actions/upload-artifact": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+    "actions/download-artifact": "d3f86a106a0bac45b974a628896c90dbdf5c8093",
+    "signpath/github-action-submit-signing-request": "f6d04783b4569d051e0c80105fe66e82819d0092",
 }
 
 
@@ -54,16 +56,15 @@ def test_release_gate_is_a_strict_superset_with_real_artifact_checks():
     release = read("tools/validate-release.ps1")
 
     assert "npm --prefix electron run package:win" in script
-    assert "npm --prefix electron run smoke:packaged-ui" in script
-    assert "tools/validate-release.ps1" in script
+    assert "tools/test-installed-windows.ps1" in script
+    assert "tools/validate-release.ps1" not in script
     assert "& powershell" not in script
     assert "Get-AuthenticodeSignature" in release
     assert 'Status -ne "Valid"' in release
     assert "Get-FileHash" in release
     assert 'Algorithm SHA256' in release
-    assert "ffprobe.exe" in release
-    assert "node.exe" in release
-    assert "dr-download-backend.exe" in release
+    assert "SignPath Foundation" in release
+    assert "TimeStamperCertificate" in release
 
 
 def test_pr_workflow_uses_windows_and_declared_runtime_versions():

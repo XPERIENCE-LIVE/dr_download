@@ -30,7 +30,7 @@ Estados: `covered` tiene evidencia automatizada suficiente; `partial` tiene cobe
 | US-051 | checksum + promoción + espera activa | actualización N→N+1 | partial | E2E-US-051 |
 | US-052 | checksum inválido + retry interval | rollback app/NSIS | partial | GAP-US-052-APP |
 | US-053 | NSIS construido | firma e instalación limpia | blocked | certificado Authenticode |
-| US-054 | contrato de preservación | desinstalar NSIS exacto y comparar archivo | blocked | MAN-US-054 pending; smoke instalado aún no existe |
+| US-054 | contrato de preservación | NSIS real + tools/test-installed-windows.ps1; hashes de config/SQLite/descargas | blocked | Automatización en runner disponible; MAN-US-054 Windows 10/11 pending |
 | US-060 | flujos React parciales | teclado, lector, contraste, escalas y movimiento reducido | partial | MAN-US-060 pending |
 | US-061 | cambio de idioma React | recorrido completo ES/EN y reinicio | partial | MAN-US-061 pending |
 | US-062 | workflow-ux.test.jsx: lecturas, inspección, navegación, encolado y pie; ejecución verde pendiente | backend interrumpido, borrador y cola real ES/EN | partial | MAN-US-062 pending |
