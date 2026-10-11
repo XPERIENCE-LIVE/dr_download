@@ -15,6 +15,26 @@ FastAPI ── cola ── yt-dlp.exe actualizable obligatorio
    └── SQLite + preferencias locales
 ```
 
+## Reproducción y listas (planificado, ADR-004)
+
+[ADR-004](adr/ADR-004-streaming-playback-and-playlists.md) aprueba reproducir sin el reproductor oficial y gestionar listas; el [contrato](../product/playback-and-playlists.md) fija límites. Sin implementar.
+
+```text
+<video src="dr-stream://play/<uuid>?start=s">   (renderer, CSP media-src dr-stream:)
+        │
+Electron main: protocol.handle valida forma, añade token
+        │ HTTP 127.0.0.1
+        ▼
+FastAPI GET /playback/{uuid}/stream
+        │ sesión en memoria (URLs + cabeceras, TTL 4 h)
+        ▼
+ffmpeg.exe incluido: -ss s, vídeo + audio, -c copy, MP4 fragmentado → stdout
+        ▲
+yt-dlp.exe incluido resolvió los streams en POST /playback (consentimiento estricto)
+```
+
+Buscar = terminar el proceso y abrir otro stream en el nuevo `start`. Las listas viven en tablas `playlists` y `playlist_items` del mismo SQLite; la importación usa el motor con `--flat-playlist`. SponsorBlock es opcional, con consentimiento propio, y su fallo se muestra sin detener el vídeo.
+
 ## Seguridad
 
 El renderer no recibe `ipcRenderer`, filesystem ni una función HTTP genérica. `ipc-contract.js` transforma únicamente operaciones conocidas. Electron valida el `webContents` emisor; el backend exige `X-Dr-Download-Token` cuando lo inicia la aplicación. CSP bloquea conexiones del renderer, ventanas nuevas y navegación.

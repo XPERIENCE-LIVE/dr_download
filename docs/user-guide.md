@@ -22,6 +22,10 @@ Cada navegador necesita autorización propia: cambiar de Edge a Firefox requiere
 
 Los errores incluyen causa y acción: volver a analizar, reintentar tarea, elegir carpeta, revisar Ajustes o exportar diagnóstico local. Reintentar tarea conserva su ID. Si el servicio local está desconectado, reintenta o reinicia; reiniciar descarta el borrador. El preset compatible falla explícitamente si el origen no ofrece los codecs requeridos; puedes elegir otro resultado conscientemente.
 
+### Próximamente: reproducción y listas
+
+Función aprobada y **aún no disponible**. Podrás pulsar **Reproducir** tras analizar un enlace de YouTube o Vimeo y verlo en la aplicación sin los anuncios del reproductor oficial, buscar en la barra de tiempo, crear listas en **Listas**, importar una lista por enlace (hasta 500 vídeos) y reproducirla en orden. Saltar patrocinios es opcional y requiere autorizar SponsorBlock en Ajustes. Reproducir YouTube fuera de su reproductor incumple sus Términos de Servicio y usar cookies de tu cuenta puede provocar restricciones; DRM y emisiones en directo no se reproducen.
+
 ## English
 
 Install Dr. Download and open it directly on Windows. No virtual machine, Docker, separately installed Python or Node is required. First launch needs Internet to obtain and verify the download engine if it is not already available. A “clean VM” is a test environment, not a requirement for using the application.
@@ -43,6 +47,10 @@ Settings shows saving, confirmation or failure. Retry a failed save and wait for
 Each browser needs its own permission: switching from Edge to Firefox requires fresh consent. Queued tasks and retries use the current saved permission and switch to no cookies after confirmed revocation. If saving revocation fails, the interface blocks new browser-enabled inspection/download requests; retry saving so the change also applies to the local service and after restart. Navigate away and return to Settings without losing a pending save result.
 
 Errors explain the cause and next action: inspect again, retry a task, choose a folder, review Settings or export local diagnostics. Retrying retains the task ID. If the local service is disconnected, retry or restart; restarting discards the draft. Compatible video fails explicitly when required codecs are unavailable; choose another result consciously.
+
+### Coming soon: playback and playlists
+
+Approved and **not yet available**. You will be able to select **Play** after inspecting a YouTube or Vimeo link and watch it in the application without the official player's ads, seek on the timeline, create lists in **Playlists**, import a playlist by link (up to 500 videos) and play it in order. Sponsor skipping is optional and requires allowing SponsorBlock in Settings. Playing YouTube outside its player breaches its Terms of Service and using your account cookies may lead to restrictions; DRM and live streams are not played.
 # Carpeta de destino
 
 Al iniciar, Dr. Download crea y valida `Descargas\\Dr. Download`. Si Windows no permite escribir en la carpeta elegida, la descarga no se encola: usa “Usar carpeta Descargas” o selecciona otra ubicación. El enlace inspeccionado se conserva.

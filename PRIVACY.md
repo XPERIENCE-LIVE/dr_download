@@ -8,5 +8,7 @@ Browser access requires consent confirmed by a successful settings save. Failed 
 
 Authorization applies only to the browser source saved with strictly true consent. Switching sources requires fresh permission; inspection/creation requests without matching persisted authorization are rejected. Queueing, retries, workers and engine commands recheck current persisted authorization and use no cookies after confirmed revocation or source change. If saving revocation fails, the UI blocks new browser-enabled inspection/creation and offers retry, while the backend retains the last saved configuration; failed persistence does not guarantee revocation after restart.
 
+Planned playback and playlists (ADR-004, not yet implemented): playlists are stored only in the local SQLite database. Resolved stream addresses and provider headers stay in memory in the local service and are never written to disk, logs or the interface. Optional sponsor skipping uses the third-party SponsorBlock service: when enabled with its own confirmed and revocable consent, that service receives your IP address and the first 4 characters of the SHA-256 hash of the video identifier. It is off by default and no request is sent without consent. Using browser cookies for playback follows the same consent as downloads; the provider may restrict an account used from an unofficial client.
+
 Removing the application preserves user data by default; delete the Dr. Download application-data folder manually if complete removal is desired.
 

@@ -19,6 +19,10 @@ Se instala y ejecuta directamente en Windows como aplicación de escritorio, sin
 
 Descarga únicamente contenido que tengas autorización para guardar. Dr. Download no elude DRM.
 
+### En planificación: reproducción y listas
+
+[ADR-004](docs/architecture/adr/ADR-004-streaming-playback-and-playlists.md) aprueba reproducir en la aplicación vídeos de YouTube y Vimeo sin el reproductor oficial ni sus anuncios, buscar dentro del vídeo, saltar patrocinios con SponsorBlock (opcional, con consentimiento) y crear o importar listas. Aún **no está implementado**; el [contrato](docs/product/playback-and-playlists.md) define el comportamiento y las fases. Reproducir YouTube fuera de su reproductor incumple sus Términos de Servicio y usar cookies de tu cuenta puede provocar restricciones del proveedor: es un riesgo que asumes al usar la función. DRM y emisiones en directo no se reproducen.
+
 ## Desarrollo
 
 Configuración de ingeniería validada: Python 3.13, Node.js 22 y Windows 10/11 x64. FFmpeg, FFprobe y Node se usan desde los recursos versionados del proyecto; no se cambia silenciosamente al software instalado en el equipo.

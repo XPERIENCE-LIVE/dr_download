@@ -32,4 +32,20 @@ El backend vuelve a consultar la autorización vigente en cola, reintento, worke
 
 La búsqueda/filtro de historial y el aviso de enlace exacto repetido son locales sobre `GET /downloads`; no añaden endpoints ni prohibición de repetición. Abrir/reintentar sigue resolviendo por ID y mantiene defensa de archivos.
 
+## Reproducción y listas (planificado, ADR-004)
+
+Sin implementar. Definido por el [contrato de reproducción](../product/playback-and-playlists.md); US-067–US-072 siguen `partial`. Todas las rutas exigen el token y validan en backend aunque IPC ya haya validado.
+
+| Ruta | Entrada | Salida | Errores |
+|---|---|---|---|
+| `POST /playback` | `url` 8–2048, `cookie_source`, `max_height` entero opcional (144–2160, predeterminado 1080) | `{session_id, title, duration, height, sponsor_segments \| null, sponsor_status}`; nunca URLs ni cabeceras del proveedor | `live_unsupported`, `drm_protected`, `stream_unavailable`, 403 `browser_consent_required` |
+| `GET /playback/{session_id}/stream?start=<s>` | UUID; `start` entero `0 ≤ start ≤ duration` | `StreamingResponse` `video/mp4` fragmentado | 404 sesión desconocida, 410 `stream_expired`, 422 `start` inválido |
+| `DELETE /playback/{session_id}` | UUID | 204; termina el proceso activo | 404 |
+| `GET /playlists`, `POST /playlists` | `name` 1–100 tras recortar | listas con conteo de ítems | 422 nombre inválido |
+| `PUT /playlists/{id}`, `DELETE /playlists/{id}` | nombre / sin cuerpo | lista actualizada / 204 | 404 |
+| `POST /playlists/{id}/items`, `DELETE /playlists/{id}/items/{item_id}` | `url` y metadatos opcionales | ítem con `duplicate: bool` | 404, 422 |
+| `POST /playlists/import` | `url`, `cookie_source` | lista creada y resumen `{imported, unavailable}` | `playlist_too_large` con `found`, 403 `browser_consent_required` |
+
+`POST /playback` e importación revalidan el consentimiento estricto por fuente igual que `POST /media/inspect`. Una sesión vive 4 horas en memoria y nunca se persiste. Cada `GET .../stream` termina el proceso anterior de esa sesión antes de iniciar otro; desconectar termina el árbol de procesos. Las rutas que ejecutan el motor son síncronas en el threadpool para no bloquear streams activos; `POST /media/inspect` se corrige con el mismo criterio.
+
 Las rutas antiguas se mantienen como adaptadores durante una versión.

@@ -38,5 +38,11 @@ Estados: `covered` tiene evidencia automatizada suficiente; `partial` tiene cobe
 | US-064 | workflow-ux + preload-errors: recuperación, idioma y rechazo IPC message/detail; aceptación pendiente | errores reales y diagnóstico redactado ES/EN | partial | MAN-US-064 pending |
 | US-065 | workflow-ux + API/queue/engine: consentimiento por fuente, revocación y recheck; persistencia real pendiente | fallo de guardado/navegación, cambio de navegador, revocación, cola y retry | partial | MAN-US-065 pending |
 | US-066 | workflow-ux.test.jsx: búsqueda, estado y repetición; ejecución verde pendiente | repetir con archivos protegidos y filtros ES/EN | partial | MAN-US-066 pending |
+| US-067 | ninguna: sin implementar (fase 1) | YouTube 1080p y Vimeo, inicio ≤ 8 s, sin anuncios ni procesos al cerrar | partial | implementación y MAN-US-067 pending |
+| US-068 | ninguna: sin implementar (fase 2) | búsqueda ≤ 5 s, posición absoluta y un solo proceso | partial | implementación y MAN-US-068 pending |
+| US-069 | ninguna: sin implementar (fase 6) | salto con consentimiento, sin peticiones sin consentimiento y servicio caído visible | partial | implementación y MAN-US-069 pending |
+| US-070 | ninguna: sin implementar (fase 3) | CRUD, aviso de repetición, fallo de escritura y persistencia tras reinicio | partial | implementación y MAN-US-070 pending |
+| US-071 | ninguna: sin implementar (fase 5) | importación YouTube/Vimeo, límite 500, no disponibles y cancelación atómica | partial | implementación y MAN-US-071 pending |
+| US-072 | ninguna: sin implementar (fase 4) | orden, avance automático, ítem saltado con aviso y parada al final | partial | implementación y MAN-US-072 pending |
 
 El responsable de QA cambia el estado únicamente después de enlazar evidencia reproducible en `docs/qa/traceability-matrix.md`.

@@ -9,5 +9,6 @@
 | E5 | Seguridad y privacidad | US-040, US-041, US-042, US-043 | Ningún secreto sale del límite local | IPC endurecido y logs redactados |
 | E6 | Distribución comercial | US-050, US-051, US-052, US-053, US-054 | Instalador verificable, actualizable y seguro al desinstalar | NSIS firmado, checksum, rollback y preservación de descargas |
 | E7 | Experiencia accesible y localizada | US-060, US-061, US-062, US-063, US-064, US-065, US-066 | El producto permite preparar, entender, recuperar y encontrar descargas con accesibilidad en español e inglés | estados veraces, borrador de sesión, formatos comprensibles, errores accionables, consentimiento y búsqueda local |
+| E8 | Reproducción y listas | US-067, US-068, US-069, US-070, US-071, US-072 | El usuario ve vídeos de YouTube y Vimeo en la aplicación sin anuncios del reproductor oficial y organiza listas propias o importadas | stream combinado local, búsqueda absoluta, salto opcional de patrocinios, listas SQLite e importación acotada |
 
 Cada historia debe enlazar una prueba automatizada y una evidencia de aceptación.

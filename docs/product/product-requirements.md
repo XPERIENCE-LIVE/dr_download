@@ -25,3 +25,7 @@ Dr. Download permite preparar y descargar contenido autorizado desde una aplicac
 
 US-062–US-066 exigen disponibilidad confirmada por lecturas, inspección indeterminada, encolado diferenciado, borrador de sesión, presets comprensibles, espacio estimado validado, recuperación ES/EN, guardado confirmado y consentimiento revocable. El Historial incorpora búsqueda local por título/URL/archivo y estado; un enlace repetido se advierte y puede repetirse intencionalmente sin debilitar la protección de archivos. El [contrato de experiencia](experience-reliability.md) define límites y escenarios; [ADR-003](../architecture/adr/ADR-003-experience-and-history.md) aprueba la ampliación. No implica aceptación ni publicación.
 
+## Reproducción y listas aprobadas
+
+US-067–US-072 añaden reproducción en streaming de enlaces individuales de YouTube y Vimeo sin el reproductor oficial ni sus anuncios, búsqueda con posición absoluta, salto opcional de patrocinios con consentimiento propio, listas locales, importación de listas por enlace con límite de 500 entradas y reproducción ordenada con aviso visible de ítems no disponibles. DRM y emisiones en directo se rechazan con causa y recuperación. El [contrato de reproducción](playback-and-playlists.md) define límites y umbrales; [ADR-004](../architecture/adr/ADR-004-streaming-playback-and-playlists.md) aprueba la ampliación y registra el riesgo de Términos de Servicio aceptado por producto. No implica aceptación ni publicación firmada.
+

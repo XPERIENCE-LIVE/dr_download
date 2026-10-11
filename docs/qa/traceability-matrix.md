@@ -38,6 +38,12 @@ Formato: `Historia | contrato | símbolo/componente | prueba actual | evidencia 
 | US-064 | códigos traducidos/rechazo IPC message/detail | i18n/App/DownloadCard/main/preload | workflow-ux + preload-errors: errores, idioma y serialización | MAN-US-064 | Unreleased | partial |
 | US-065 | PUT config/HTTP403 consentimiento vigente | App/Settings/NewDownload/config/queue/engine | workflow-ux + API/queue/engine: fuente, revocación y recheck; persistencia real pendiente | MAN-US-065 | Unreleased | partial |
 | US-066 | ADR-003/filtro y repetición local | History/NewDownload/downloader | workflow-ux.test.jsx: search/filter/duplicate; verde pendiente | MAN-US-066 | Unreleased | partial |
+| US-067 | ADR-004/stream combinado sin reproductor oficial | playback_service/ruta de stream/dr-stream/vista de reproductor (planificados) | ninguna: sin implementar | MAN-US-067 | Unreleased | partial |
+| US-068 | ADR-004/búsqueda por reinicio y posición absoluta | ruta de stream con start/vista de reproductor (planificados) | ninguna: sin implementar | MAN-US-068 | Unreleased | partial |
+| US-069 | ADR-004/SponsorBlock con consentimiento propio | servicio de segmentos/Ajustes/vista de reproductor (planificados) | ninguna: sin implementar | MAN-US-069 | Unreleased | partial |
+| US-070 | ADR-004/listas SQLite locales | store playlists/rutas CRUD/IPC/vista Listas (planificados) | ninguna: sin implementar | MAN-US-070 | Unreleased | partial |
+| US-071 | ADR-004/importación flat-playlist acotada | motor flat-playlist/ruta de importación (planificados) | ninguna: sin implementar | MAN-US-071 | Unreleased | partial |
+| US-072 | ADR-004/reproducción ordenada | cola de reproducción en la vista de reproductor (planificada) | ninguna: sin implementar | MAN-US-072 | Unreleased | partial |
 | BUG-001 | `DirectoryCheck` | directory service/API/React | directory tests + React preflight | Windows clean acceptance | 2.1.0 | fixed |
 | QUALITY-001 | ADN/SDD/TDD ejecutable | contract validator + quality gates | validator tests + gate PR | `artifacts/quality/quality-pr.json` | 2.1.0 | fixed |
 

@@ -561,3 +561,103 @@ En los campos **Prueba unitaria** y **Prueba de integración**, toda referencia 
 - **Prueba E2E:** `MAN-US-066`: buscar tres campos, combinar/limpiar filtros, repetir enlace y verificar hashes previos.
 - **Evidencia requerida:** resultados filtrados ES/EN, repetición permitida, IDs distintos y archivos preservados con configuración, fecha y SHA.
 - **Riesgos:** el aviso solo cubre enlaces exactos y tareas cargadas; no detecta equivalencias de URL ni sustituye defensa de filesystem.
+
+## E8 — Reproducción y listas
+
+Aprobada en [ADR-004](../architecture/adr/ADR-004-streaming-playback-and-playlists.md) y especificada en el [contrato de reproducción](playback-and-playlists.md). Sin implementar: las pruebas se describen en prosa hasta que existan en el inventario.
+
+### US-067 — Reproducir un enlace sin anuncios
+
+- **ID:** US-067
+- **Épica:** E8 — Reproducción y listas.
+- **Persona:** usuario que quiere ver un vídeo de YouTube o Vimeo sin los anuncios del reproductor oficial.
+- **Problema:** el reproductor oficial interrumpe el vídeo con anuncios y la aplicación solo permite descargar.
+- **Precondiciones:** motor, Node y FFmpeg incluidos y verificados; enlace individual analizable; consentimiento persistido si se usa un navegador.
+- **Flujo principal:** pegar enlace → analizar → **Reproducir** → resolver streams compatibles → combinar con FFmpeg en el backend → reproducir en la vista de reproductor mediante `dr-stream:`.
+- **Flujos alternativos:** emisión en directo rechazada con `live_unsupported`; formato con DRM rechazado con `drm_protected`; sin pareja reproducible `stream_unavailable`; sesión caducada `stream_expired` con **Volver a cargar**; navegador sin consentimiento recibe 403 `browser_consent_required`.
+- **Given/When/Then:** Given un vídeo público de YouTube con anuncios en el reproductor oficial, When el usuario pulsa Reproducir, Then el vídeo empieza en ≤ 8 s sin cargar el reproductor oficial ni anuncios. Given una emisión en directo, When intenta reproducirla, Then ve causa y recuperación sin que se inicie ningún proceso. Given un vídeo en reproducción, When cierra la aplicación, Then no queda ningún proceso de reproducción activo. Given una sesión de más de 4 horas, When reanuda, Then ve que expiró y puede volver a cargar.
+- **Prueba unitaria:** pendiente de implementación: selección de pareja de vídeo y audio compatible por altura, rechazo de DRM y directo, TTL de sesión y construcción del comando FFmpeg sin exponer URLs.
+- **Prueba de integración:** pendiente de implementación: ruta de stream con token, consentimiento por fuente, esquema dr-stream con validación de forma, CSP con media-src y terminación del árbol de procesos al desconectar.
+- **Prueba E2E:** `MAN-US-067`: reproducir YouTube 1080p y Vimeo, medir inicio, comprobar ausencia de anuncios y de procesos al cerrar.
+- **Evidencia requerida:** tiempos de inicio, captura de procesos tras cerrar, registro sin URLs ni cookies y versión del motor con configuración, fecha y SHA.
+- **Riesgos:** incumple los Términos de Servicio del proveedor (aceptado en ADR-004); cambios de cliente del proveedor y caducidad de URLs; cuenta marcada al usar cookies.
+
+### US-068 — Buscar dentro del vídeo
+
+- **ID:** US-068
+- **Épica:** E8 — Reproducción y listas.
+- **Persona:** usuario que salta a otra parte del vídeo en reproducción.
+- **Problema:** un stream combinado en vivo no admite búsqueda nativa por rangos.
+- **Precondiciones:** US-067 en reproducción con duración conocida.
+- **Flujo principal:** mover la barra de tiempo → cancelar el proceso actual → abrir stream con `start` entero → mostrar posición absoluta real.
+- **Flujos alternativos:** sin duración conocida no hay barra de búsqueda; `start` negativo, fraccionario o mayor que la duración se rechaza en IPC y API; búsquedas rápidas sucesivas solo dejan vivo el último proceso.
+- **Given/When/Then:** Given un vídeo de 10 min en reproducción, When busca el minuto 7, Then reanuda en ≤ 5 s y la barra muestra 7:00 o el fotograma clave anterior real. Given cinco búsquedas en 2 s, When termina la última, Then existe un único proceso de reproducción. Given un `start` mayor que la duración, When llega a la API, Then se rechaza sin iniciar procesos.
+- **Prueba unitaria:** pendiente de implementación: cálculo de posición absoluta, validación de start y cancelación del proceso previo.
+- **Prueba de integración:** pendiente de implementación: búsquedas sucesivas contra la ruta de stream sin procesos huérfanos.
+- **Prueba E2E:** `MAN-US-068`: buscar en YouTube y Vimeo, medir reanudación y contar procesos.
+- **Evidencia requerida:** tiempos de reanudación, posiciones mostradas y conteo de procesos con configuración, fecha y SHA.
+- **Riesgos:** la búsqueda cae en el fotograma clave anterior; cada búsqueda vuelve a contactar al proveedor.
+
+### US-069 — Saltar patrocinios del creador
+
+- **ID:** US-069
+- **Épica:** E8 — Reproducción y listas.
+- **Persona:** usuario que no quiere ver segmentos promocionales grabados dentro del vídeo.
+- **Problema:** el creador incluye patrocinios que no son anuncios del reproductor y no desaparecen con US-067.
+- **Precondiciones:** US-067 y US-068 operativas; consentimiento de SponsorBlock persistido y estrictamente verdadero.
+- **Flujo principal:** activar en Ajustes y confirmar consentimiento → reproducir → obtener segmentos → al entrar en uno buscar su final → anunciar **Patrocinio omitido** con opción de deshacer.
+- **Flujos alternativos:** sin consentimiento no se consulta el servicio; servicio sin respuesta en 5 s o con error muestra `sponsorblock_unavailable` y la reproducción sigue; revocar impide consultas nuevas.
+- **Given/When/Then:** Given consentimiento confirmado y un vídeo con segmento de patrocinio, When la reproducción llega al segmento, Then salta a su final y lo anuncia. Given consentimiento no guardado, When reproduce, Then no se envía ninguna petición al servicio. Given el servicio caído, When reproduce, Then ve que los patrocinios no están disponibles y el vídeo continúa.
+- **Prueba unitaria:** pendiente de implementación: prefijo SHA-256 de 4 caracteres, filtrado de categorías, salto y deshacer, estado sin consentimiento y timeout.
+- **Prueba de integración:** pendiente de implementación: consentimiento persistido y revocado contra la API local y fallo del servicio externo.
+- **Prueba E2E:** `MAN-US-069`: vídeo con patrocinio conocido con y sin consentimiento y con red al servicio bloqueada.
+- **Evidencia requerida:** registro de peticiones sin identificador completo, salto observado y estado de fallo con configuración, fecha y SHA.
+- **Riesgos:** privacidad frente a un tercero (IP y prefijo); segmentos aportados por la comunidad pueden ser inexactos.
+
+### US-070 — Gestionar listas locales
+
+- **ID:** US-070
+- **Épica:** E8 — Reproducción y listas.
+- **Persona:** usuario que agrupa vídeos para verlos después.
+- **Problema:** no existe forma de guardar y organizar enlaces para reproducir.
+- **Precondiciones:** base SQLite operativa; vista **Listas** disponible.
+- **Flujo principal:** crear lista → añadir vídeo desde Nueva descarga o pegando un enlace → renombrar → quitar ítem → borrar lista con confirmación.
+- **Flujos alternativos:** nombre vacío o mayor de 100 caracteres se rechaza; enlace repetido se advierte y puede añadirse; fallo de escritura muestra error con reintento y no confirma el cambio; SQLite corrupto falla cerrado.
+- **Given/When/Then:** Given una lista creada, When añade un vídeo analizado, Then el ítem aparece con título y duración y persiste tras reiniciar. Given un enlace ya presente, When lo añade, Then ve un aviso y puede añadirlo de nuevo. Given una escritura fallida, When renombra, Then no se muestra confirmación y puede reintentar. Given una lista con ítems, When la borra y confirma, Then desaparece sin tocar archivos descargados.
+- **Prueba unitaria:** pendiente de implementación: esquema y operaciones del almacén, validación de nombre y URL, aviso de repetición.
+- **Prueba de integración:** pendiente de implementación: rutas CRUD con token, operaciones IPC enumeradas y persistencia tras reinicio.
+- **Prueba E2E:** `MAN-US-070`: crear, añadir, renombrar, quitar, reiniciar y borrar en ES/EN.
+- **Evidencia requerida:** estado antes y después del reinicio, fallo de escritura visible y archivos descargados intactos con configuración, fecha y SHA.
+- **Riesgos:** crecimiento de la base de datos; no es una biblioteca multimedia.
+
+### US-071 — Importar una lista de YouTube o Vimeo
+
+- **ID:** US-071
+- **Épica:** E8 — Reproducción y listas.
+- **Persona:** usuario que ya tiene una lista en el proveedor.
+- **Problema:** copiar enlace por enlace una lista larga es lento y propenso a errores.
+- **Precondiciones:** enlace de lista público o accesible con consentimiento persistido.
+- **Flujo principal:** pegar enlace de lista → **Importar** → leer entradas con `--flat-playlist` → crear lista local con el título de origen → mostrar resumen de importadas y no disponibles.
+- **Flujos alternativos:** más de 500 entradas responde `playlist_too_large` sin importar nada; entradas privadas o borradas quedan marcadas; cancelar no crea lista parcial; enlace que no es lista se rechaza con recuperación.
+- **Given/When/Then:** Given una lista pública de 50 vídeos con 2 privados, When la importa, Then se crea una lista con 50 ítems y 2 marcados no disponibles. Given una lista de 600 vídeos, When la importa, Then no se crea nada y ve el límite y el número encontrado. Given una importación en curso, When cancela, Then no queda ninguna lista parcial.
+- **Prueba unitaria:** pendiente de implementación: comando con flat-playlist, normalización de entradas, marcado de no disponibles y límite.
+- **Prueba de integración:** pendiente de implementación: ruta de importación con consentimiento, cancelación y atomicidad de la creación.
+- **Prueba E2E:** `MAN-US-071`: importar listas de YouTube y Vimeo, una mayor de 500 y cancelar.
+- **Evidencia requerida:** resumen de importación, tiempo para 500 entradas y ausencia de listas parciales con configuración, fecha y SHA.
+- **Riesgos:** cambios de formato de listas del proveedor; importar no autoriza pegado múltiple ni descarga de listas.
+
+### US-072 — Reproducir una lista en orden
+
+- **ID:** US-072
+- **Épica:** E8 — Reproducción y listas.
+- **Persona:** usuario que ve una lista completa sin intervenir entre vídeos.
+- **Problema:** reproducir vídeo a vídeo exige volver a la lista cada vez.
+- **Precondiciones:** US-067 y US-070 operativas; lista con al menos un ítem.
+- **Flujo principal:** **Reproducir lista** → primer ítem → avance automático al terminar → **Anterior** y **Siguiente** → detener al final.
+- **Flujos alternativos:** ítem que falla al resolverse se salta con aviso que nombra ítem y causa; si fallan todos se detiene con el error; ítem marcado no disponible se salta sin intentar resolverlo.
+- **Given/When/Then:** Given una lista de tres vídeos, When termina el primero, Then empieza el segundo sin intervención. Given un ítem borrado en el proveedor, When le toca, Then se salta con aviso visible y continúa. Given el último ítem, When termina, Then la reproducción se detiene sin repetir.
+- **Prueba unitaria:** pendiente de implementación: orden, avance, anterior y siguiente, salto con aviso y parada al final.
+- **Prueba de integración:** pendiente de implementación: secuencia de sesiones de reproducción sin procesos huérfanos entre ítems.
+- **Prueba E2E:** `MAN-US-072`: lista mixta YouTube y Vimeo con un ítem no disponible en ES/EN.
+- **Evidencia requerida:** orden reproducido, aviso del ítem saltado y conteo de procesos con configuración, fecha y SHA.
+- **Riesgos:** cada ítem vuelve a resolver streams; aleatorio y repetición están diferidos.

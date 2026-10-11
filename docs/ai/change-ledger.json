@@ -42,6 +42,54 @@
       "blocking_reason": "Falta aceptación del paquete real MAN-US-066 y hashes de archivos preservados ligados al mismo SHA."
     },
     {
+      "id": "US-067",
+      "status": "open",
+      "fingerprint": "ad-free-stream-playback-v1",
+      "regression_tests": [],
+      "evidence": [],
+      "blocking_reason": "Sin implementar (fase 1 de ADR-004); falta spike de entrega medido y MAN-US-067. Publicación firmada bloqueada hasta revisar condiciones de SignPath."
+    },
+    {
+      "id": "US-068",
+      "status": "open",
+      "fingerprint": "stream-seek-by-restart-v1",
+      "regression_tests": [],
+      "evidence": [],
+      "blocking_reason": "Sin implementar (fase 2 de ADR-004); falta MAN-US-068."
+    },
+    {
+      "id": "US-069",
+      "status": "open",
+      "fingerprint": "sponsorblock-consented-skip-v1",
+      "regression_tests": [],
+      "evidence": [],
+      "blocking_reason": "Sin implementar (fase 6 de ADR-004); falta verificar sponsorblock_chapters del motor y MAN-US-069."
+    },
+    {
+      "id": "US-070",
+      "status": "open",
+      "fingerprint": "local-playlists-crud-v1",
+      "regression_tests": [],
+      "evidence": [],
+      "blocking_reason": "Sin implementar (fase 3 de ADR-004); falta MAN-US-070."
+    },
+    {
+      "id": "US-071",
+      "status": "open",
+      "fingerprint": "bounded-playlist-import-v1",
+      "regression_tests": [],
+      "evidence": [],
+      "blocking_reason": "Sin implementar (fase 5 de ADR-004); falta MAN-US-071."
+    },
+    {
+      "id": "US-072",
+      "status": "open",
+      "fingerprint": "ordered-playlist-playback-v1",
+      "regression_tests": [],
+      "evidence": [],
+      "blocking_reason": "Sin implementar (fase 4 de ADR-004); falta MAN-US-072."
+    },
+    {
       "id": "BUG-001",
       "status": "open",
       "fingerprint": "output-directory-preflight-v1",
