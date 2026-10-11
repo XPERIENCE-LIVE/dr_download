@@ -58,7 +58,8 @@ function Invoke-Nsis([string]$Executable, [string]$Arguments) {
     return $child.ExitCode
 }
 try {
-    $env:PATH = "$env:SystemRoot/System32;$env:SystemRoot;$env:SystemRoot/System32/WindowsPowerShell/v1.0"
+    # The Python launcher may live directly in C:/Windows, so exclude that directory too.
+    $env:PATH = "$env:SystemRoot/System32;$env:SystemRoot/System32/WindowsPowerShell/v1.0"
     foreach ($command in @("python", "python3", "py", "node", "npm", "ffmpeg", "ffprobe")) {
         if (Get-Command $command -ErrorAction SilentlyContinue) { throw "External runtime is visible: $command" }
     }
