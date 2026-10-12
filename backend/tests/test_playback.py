@@ -52,6 +52,48 @@ def test_equal_bitrate_audio_respects_provider_language_and_quality():
     assert select_streams(info, 1080)["audio"]["url"].endswith("standard")
 
 
+@pytest.mark.parametrize("codec,expected", [("aac", "hls-audio"), ("opus", "audio")])
+def test_hls_video_uses_verified_hls_audio_without_displacing_preferred_aac(codec, expected):
+    info = sample_info()
+    info["formats"][0]["protocol"] = "m3u8_native"
+    info["formats"][1].update(protocol="https", quality=3, abr=256)
+    info["formats"].append({"url": "https://cdn.test/hls-audio", "vcodec": "none",
+                            "acodec": codec, "protocol": "m3u8_native", "abr": 128})
+    assert select_streams(info, 1080)["audio"]["url"] == "https://cdn.test/" + expected
+
+
+def test_hls_primary_audio_is_probed_even_when_https_audio_has_a_known_codec(monkeypatch):
+    info = sample_info()
+    info["formats"][0]["protocol"] = "m3u8_native"
+    info["formats"][1]["protocol"] = "https"
+    info["formats"].append({"url": "https://cdn.test/hls-audio", "vcodec": "none",
+                            "acodec": None, "protocol": "m3u8_native", "tbr": 128})
+    manager = PlaybackManager()
+    calls = []
+    monkeypatch.setattr("backend.playback_service._binary", lambda name: Path(name))
+    def probe(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, b'{"streams":[{"codec_type":"audio","codec_name":"aac"}]}', b'')
+    monkeypatch.setattr(manager, "run_process", probe)
+    safe = manager.register(info, 1080)
+    assert len(calls) == 1 and calls[0][-1] == "https://cdn.test/hls-audio"
+    assert manager.sessions[safe["session_id"]]["selection"]["audio"]["url"].endswith("hls-audio")
+    manager.shutdown()
+
+
+def test_failed_hls_primary_audio_probe_does_not_fall_back_to_https_audio(monkeypatch):
+    info = sample_info()
+    info["formats"][0]["protocol"] = "m3u8_native"
+    info["formats"][1]["protocol"] = "https"
+    info["formats"].append({"url": "https://cdn.test/hls-audio", "vcodec": "none",
+                            "acodec": None, "protocol": "m3u8_native"})
+    manager = PlaybackManager()
+    monkeypatch.setattr("backend.playback_service._binary", lambda name: Path(name))
+    monkeypatch.setattr(manager, "run_process", lambda *args, **kwargs: subprocess.CompletedProcess([], 1, b'', b'HTTP 403 Forbidden'))
+    with pytest.raises(PlaybackError, match="stream_unavailable"):
+        manager.register(info, 1080)
+
+
 def test_demuxing_error_is_failure_even_when_ffmpeg_exits_zero():
     import sys
     manager = PlaybackManager()
@@ -607,3 +649,36 @@ def test_bundled_http_stream_recovers_or_fails_visibly_after_transport_disconnec
             assert 0 < frames < 150 and session["status"] == "failed"
     finally:
         manager.shutdown(); server.shutdown(); server.server_close(); serving.join(timeout=3)
+
+
+def test_bundled_hls_adts_audio_remux_decodes_both_tracks_without_transcoding(tmp_path, monkeypatch):
+    ffmpeg = Path(__file__).resolve().parents[2] / "electron/resources/ffmpeg/ffmpeg.exe"
+    if not ffmpeg.is_file():
+        pytest.skip("Bundled FFmpeg runtime not prepared in this checkout")
+    video = tmp_path / "video.mp4"
+    audio = tmp_path / "audio.aac"
+    playlist = tmp_path / "audio.m3u8"
+    subprocess.run([str(ffmpeg), "-v", "error", "-f", "lavfi", "-i", "testsrc2=size=160x90:rate=25",
+                    "-t", "3", "-c:v", "libx264", "-g", "25", str(video)], check=True, timeout=30)
+    subprocess.run([str(ffmpeg), "-v", "error", "-f", "lavfi", "-i", "sine=frequency=440",
+                    "-t", "3", "-c:a", "aac", "-f", "adts", str(audio)], check=True, timeout=30)
+    playlist.write_text("#EXTM3U\n#EXT-X-TARGETDURATION:3\n#EXTINF:3,\naudio.aac\n#EXT-X-ENDLIST\n")
+    manager = PlaybackManager()
+    safe = manager.register(sample_info(), 1080)
+    session = manager.sessions[safe["session_id"]]
+    session["selection"] = {"video": {"url": str(video), "acodec": "none"},
+                            "audio": {"url": str(playlist), "acodec": "aac"}, "height": 90}
+    monkeypatch.setenv("DR_DOWNLOAD_FFMPEG", str(ffmpeg.parent))
+    try:
+        _, process = manager.open_stream(safe["session_id"], 0, manager.reserve_stream(safe["session_id"]))
+        async def consume():
+            return b"".join([chunk async for chunk in manager.stream(session, process)])
+        output = asyncio.run(consume())
+        assert session["status"] == "ended", bytes(process._dr_errors)
+        probe = subprocess.run([str(ffmpeg.with_name("ffprobe.exe")), "-v", "error", "-count_frames",
+                                "-show_entries", "stream=codec_type,nb_read_frames", "-of", "json", "pipe:0"],
+                               input=output, capture_output=True, check=True, timeout=30)
+        counts = {track["codec_type"]: int(track["nb_read_frames"]) for track in json.loads(probe.stdout)["streams"]}
+        assert counts["video"] == 75 and counts["audio"] >= 120
+    finally:
+        manager.shutdown()

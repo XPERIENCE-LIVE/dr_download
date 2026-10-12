@@ -7,6 +7,11 @@ function durationOption(value = "15") {
     "Duration must be an integer from 1 to 3600 seconds");
   return Number(value);
 }
+function observationDuration(sourceDuration, seconds) {
+  assert(Number.isFinite(sourceDuration) && sourceDuration - 15.23 >= seconds,
+    "Source is too short for the requested continuous observation after seeking");
+  return seconds;
+}
 function localRendererRequest(url) {
   return /^(?:file:|data:|dr-stream:\/\/play\/)/.test(url);
 }
@@ -17,6 +22,9 @@ function decodedSeekSeconds(stats, actual, requested, begun) {
 }
 if (process.argv.includes("--self-test")) {
   assert.equal(durationOption("600"), 600);
+  assert.equal(observationDuration(644, 600), 600);
+  assert.throws(() => observationDuration(597, 600), /too short/);
+  assert.throws(() => observationDuration(NaN, 600), /too short/);
   for (const value of ["NaN", "0", "-1", "3601", "1.5", "true"]) assert.throws(() => durationOption(value));
   for (const url of ["file:///app/index.html", "data:image/png;base64,x", "dr-stream://play/session?start=0"]) assert(localRendererRequest(url));
   for (const url of ["https://youtube.com/player.js", "https://googleads.g.doubleclick.net/ad", "http://127.0.0.1:8000/playback"]) assert(!localRendererRequest(url));
@@ -37,7 +45,7 @@ const artifacts = path.resolve(artifactDirectory);
 await mkdir(artifacts, { recursive: true });
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 const evidence = { schema: 1, kind: "real-electron-playback-ui", status: "failed", publishable: false,
-  started_at_utc: new Date().toISOString(), sustained_seconds_per_provider: { youtube: seconds, vimeo: Math.min(seconds, 15) },
+  started_at_utc: new Date().toISOString(), sustained_seconds_per_provider: { youtube: seconds, vimeo: seconds },
   acceptance_scope: "Current executable and profile only; installed clean Windows and signed release acceptance remain separate",
   videos: [], requests: [], responses: [], request_failures: [], checks: [], threshold_failures: [] };
 let socket;
@@ -194,13 +202,13 @@ try {
     evidence.playlist = playlist; evidence.checks.push("real UI create, add, duplicate, rename, remove and SQLite read");
 
     for (const [index, source] of sources.entries()) {
-      const observationSeconds = index === 0 ? seconds : Math.min(seconds, 15);
       await click("Player"); await waitFor("Boolean(document.querySelector('#playback-url'))");
       await setValue("#playback-url", source);
       const begun = await evaluate("(() => { const at = performance.now(); document.querySelector('#playback-url').form.requestSubmit(); return at; })()");
       await waitFor("document.querySelector('video') && window.__playbackSmoke.videos[document.querySelector('video').getAttribute('src')]?.firstFrameAt != null");
       await waitFor("!document.querySelector('video').paused && document.querySelector('video').currentTime > 0");
       const initial = await evaluate(snapshot);
+      const observationSeconds = observationDuration(await evaluate("Number(document.querySelector('.player-timeline input').max)"), seconds);
       const item = { source, initial, first_frame_seconds: (initial.stats.firstFrameAt - begun) / 1000 };
       evidence.videos.push(item);
       assert(!initial.error && initial.width > 0 && initial.stats.presentedFrames > 0, "Chromium did not decode video");

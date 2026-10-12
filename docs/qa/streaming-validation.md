@@ -2,6 +2,8 @@
 
 La rama contiene servicios, rutas, almacenamiento SQLite, protocolo Electron y vistas React. Esto acredita existencia de implementación, no aceptación del producto. Las seis historias conservan `partial`, sus entradas del ledger `open` y MAN-US-067–MAN-US-072 `pending`. El resultado global, SHA/fingerprint y limitaciones deben leerse en la evidencia de la ejecución concreta; no reutilizar conteos de una ejecución anterior.
 
+La [revalidación posterior](streaming-followup-validation.md) conserva diagnósticos, correcciones, identidades del paquete y resultados reales, incluidos los fallos de pruebas y latencia.
+
 ## Inventario ejecutable
 
 | Alcance | Suite y ejemplos existentes | Límite de lo que demuestra |
@@ -55,10 +57,10 @@ Su evidencia declara comando, sistema, commit y árbol modificado. Un árbol mod
 `electron/scripts/run-playback-ui-smoke.ps1` usa CDP sobre Electron real y un perfil temporal; `-Packaged` ejecuta `win-unpacked`. Registra fotogramas decodificados y el instante en que el tramo de búsqueda se vuelve visible, pausa, silencio, navegación, CRUD, anterior/siguiente, avance natural, fin de lista y persistencia tras reiniciar. Los umbrales fallidos se conservan y hacen fallar el resultado final, aunque se continúe para comprobar el resto de funciones. La identidad incluye hashes del ejecutable, app.asar, backend, Node, FFmpeg/FFprobe, motor explícito y archivos fuente; también verifica que no cambien durante la ejecución y que no queden procesos propios.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File electron/scripts/run-playback-ui-smoke.ps1 -Packaged -Duration 600 -EnginePath "artifacts/quality/streaming-implementation/real-api/data/engine/yt-dlp.exe"
+powershell -NoProfile -ExecutionPolicy Bypass -File electron/scripts/run-playback-ui-smoke.ps1 -Packaged -Duration 600 -VimeoUrl "https://vimeo.com/20465972" -EnginePath "artifacts/quality/streaming-implementation/real-api/data/engine/yt-dlp.exe"
 ```
 
-El ejemplo requiere un motor real previamente verificado en esa ruta; no acredita su instalación inicial. `-Duration 600` observa YouTube durante 600 s y Vimeo durante 15 s: el vídeo de Vimeo de ejemplo dura 597 s y no permite 600 s después de buscar. La banda y estabilidad de red no se calibran automáticamente. No confundir una observación corta de Vimeo con diez minutos ni `win-unpacked` con instalación NSIS.
+El ejemplo requiere un motor real previamente verificado en esa ruta; no acredita su instalación inicial. `-Duration 600` exige 600 s por proveedor y falla si la duración del origen no alcanza después de buscar a 15,23 s. El enlace largo de Vimeo se verificó como Elephants Dream, 644 s y 360p; el enlace predeterminado de Vimeo, 1084537, sigue sirviendo para pruebas cortas a 720p pero no permite 600 s después de buscar. Las ejecuciones históricas que limitaron Vimeo a 15 s conservan ese alcance y no se convierten en pruebas de diez minutos. La banda y estabilidad de red no se calibran automáticamente; `win-unpacked` tampoco acredita instalación NSIS.
 
 ## Pendientes de aceptación
 

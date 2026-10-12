@@ -1,5 +1,7 @@
 # Verificación de streaming y listas — 2026-10-12
 
+**Continuación:** la [revalidación posterior](streaming-followup-validation.md) diagnostica las denegaciones de audio, corrige el remux AAC y endurece el smoke API. Este informe conserva los resultados históricos de sus candidatos; no deben atribuirse al paquete posterior.
+
 La rama contiene implementación de US-067–US-072, además del plan inicial `f678cf2ce78e280b75001ca48ad0009c8596cdb0`. Este informe distingue pruebas de código, proveedores reales y paquete ejecutado. Las historias siguen `partial`, el ledger `open` y la aceptación manual `pending`; no se certifica una release.
 
 ## Última revisión: precisión y final redondeado

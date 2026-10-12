@@ -35,6 +35,41 @@ test("a truncated stream is shown as failure instead of successful playlist adva
   expect(screen.queryByText("Ended")).not.toBeInTheDocument();
   expect(screen.getByRole("alert")).toBeInTheDocument();
 });
+
+test("provider denial before playback starts skips the unavailable playlist item with its cause", async () => {
+  const api = apiMock({ getPlayback: jest.fn().mockResolvedValue({ error: { code: "source_access_denied" } }),
+    startPlayback: jest.fn().mockResolvedValueOnce(metadata()).mockResolvedValue(metadata("second-session")) });
+  const { container } = render(<Playback api={api} config={config} t={t} request={{ items: [first, second], index: 0 }} />);
+  await screen.findByText("session-one");
+  fireEvent.error(container.querySelector("video"));
+  await screen.findByText("second-session");
+  expect(api.stopPlayback).toHaveBeenCalledWith("session-one");
+  expect(screen.getByText(/First.*provider denied access/)).toBeInTheDocument();
+});
+
+test("provider denial after playback started remains visible without skipping the rest of the video", async () => {
+  const api = apiMock({ getPlayback: jest.fn().mockResolvedValue({ error: { code: "source_access_denied" } }) });
+  const { container } = render(<Playback api={api} config={config} t={t} request={{ items: [first, second], index: 0 }} />);
+  await screen.findByText("session-one");
+  fireEvent.playing(container.querySelector("video"));
+  fireEvent.error(container.querySelector("video"));
+  await waitFor(() => expect(api.stopPlayback).toHaveBeenCalledWith("session-one"));
+  expect(api.startPlayback).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("alert")).toHaveTextContent(/provider denied access/);
+});
+
+test("initial provider denial while going Previous continues in the requested direction", async () => {
+  const third = { ...second, url: "https://vimeo.com/456" };
+  const api = apiMock({ getPlayback: jest.fn().mockResolvedValue({ error: { code: "source_access_denied" } }),
+    startPlayback: jest.fn().mockResolvedValueOnce(metadata("third-session")).mockResolvedValueOnce(metadata("second-session")).mockResolvedValue(metadata("first-session")) });
+  const { container } = render(<Playback api={api} config={config} t={t} request={{ items: [first, second, third], index: 2 }} />);
+  await screen.findByText("third-session");
+  fireEvent.click(screen.getByRole("button", { name: "Previous" }));
+  await screen.findByText("second-session");
+  fireEvent.error(container.querySelector("video"));
+  await screen.findByText("first-session");
+  expect(api.startPlayback.mock.calls.map(([body]) => body.url)).toEqual([third.url, second.url, first.url]);
+});
 test("an early end without a backend error cannot advance a playlist", async () => {
   const api = apiMock({ getPlayback: jest.fn().mockResolvedValue({ status: "playing", error: null }) });
   const { container } = render(<Playback api={api} config={config} t={t} request={{ items: [first, second], index: 0 }} />);

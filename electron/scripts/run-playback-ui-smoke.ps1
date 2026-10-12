@@ -86,7 +86,7 @@ function Invoke-UiRun([bool]$Persistence) {
         $smokeArguments += if ($Persistence) { "--verify-persistence" } else { @("`"$YouTubeUrl`"", "`"$VimeoUrl`"", "--duration=$Duration") }
         $smokeProcess = Start-Process -FilePath $node -ArgumentList $smokeArguments -WindowStyle Hidden -PassThru -WorkingDirectory $electronRoot -RedirectStandardOutput (Join-Path $artifacts "$suffix-stdout.log") -RedirectStandardError (Join-Path $artifacts "$suffix-stderr.log")
         $smokeProcess.Handle | Out-Null
-        $deadline = (Get-Date).AddSeconds($Duration + 450)
+        $deadline = (Get-Date).AddSeconds(2 * $Duration + 450)
         do {
             $snapshot = @(Get-CimInstance Win32_Process)
             $ids = @($applicationProcess.Id)

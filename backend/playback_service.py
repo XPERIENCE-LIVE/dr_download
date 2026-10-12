@@ -22,6 +22,7 @@ from .engine_runner import (
 from .error_mapping import classify_error
 
 _TRANSPORT_ERRORS = ("[tls", "partial file", "error during demuxing", "stream ends prematurely")
+_HLS_PROTOCOLS = {"m3u8", "m3u8_native"}
 
 
 class PlaybackError(RuntimeError):
@@ -88,6 +89,7 @@ def select_streams(info, max_height):
             return {"video": video, "audio": None, "height": video["height"]}
         if audios:
             audio = max(audios, key=lambda item: (bool(re.match(r"^(mp4a|aac)", item.get("acodec", ""))),
+                                                  video.get("protocol") in _HLS_PROTOCOLS and item.get("protocol") in _HLS_PROTOCOLS,
                                                   _number(item.get("language_preference")) or 0,
                                                   _number(item.get("quality")) or 0,
                                                   _number(item.get("abr")) or 0))
@@ -162,7 +164,10 @@ def build_stream_command(ffmpeg, selection, start):
     if selection["audio"]:
         command += _input_options(selection["audio"], start)
     command += ["-map", "0:v:0", "-map", "1:a:0" if selection["audio"] else "0:a:0",
-                "-c", "copy", "-map_metadata", "-1", "-avoid_negative_ts", "make_zero",
+                "-c", "copy"]
+    if re.match(r"^(mp4a|aac)", (selection["audio"] or selection["video"]).get("acodec") or ""):
+        command += ["-bsf:a", "aac_adtstoasc"]
+    command += ["-map_metadata", "-1", "-avoid_negative_ts", "make_zero",
                 "-movflags", "frag_keyframe+empty_moov+default_base_moof", "-frag_duration", "1000000",
                 "-f", "mp4", "pipe:1"]
     return command
@@ -239,12 +244,17 @@ class PlaybackManager:
                               and item.get("protocol") in {"http", "https"} and item.get("ext") == "mp4"
                               and 0 < (_number(item.get("height")) or 0) <= max_height),
                              key=lambda item: item["height"], reverse=True)
-        if not progressive and any(not item.get("has_drm") and item.get("vcodec") == "none" and re.match(r"^(mp4a|aac|opus)", item.get("acodec") or "") for item in formats):
-            return
         unknown = [item for item in reversed(formats) if not item.get("has_drm") and item.get("vcodec") == "none" and item.get("acodec") is None and item.get("url")]
+        if not progressive and any(not item.get("has_drm") and item.get("vcodec") == "none" and re.match(r"^(mp4a|aac|opus)", item.get("acodec") or "") for item in formats):
+            selection = select_streams(info, max_height)
+            if (selection["audio"] is None or selection["video"].get("protocol") not in _HLS_PROTOCOLS
+                    or selection["audio"].get("protocol") in _HLS_PROTOCOLS):
+                return
+            # HLS video and audio stay on the same delivery path, before any stream attempt.
+            unknown = [item for item in unknown if item.get("protocol") in _HLS_PROTOCOLS]
         if not progressive and not unknown:
             return
-        source = progressive[0] if progressive else unknown[0]
+        source = progressive[0] if progressive else max(unknown, key=lambda item: _number(item.get("tbr")) or _number(item.get("abr")) or 0)
         command = [str(_binary("ffprobe")), "-v", "error"] + _input_options(source, 0)[:-2]
         command += ["-show_entries", "stream=codec_type,codec_name", "-of", "json", source["url"]]
         try:

@@ -27,6 +27,8 @@ export default function Playback({ api, config, t, request, ErrorNotice, errorDe
   const activeSession = useRef(null);
   const video = useRef(null);
   const pendingSeek = useRef(null);
+  const hasStarted = useRef(false);
+  const queueDirection = useRef(1);
   const suppressed = useRef(new Set());
   const current = useRef({ api, config, t });
   current.current = { api, config, t, maxHeight, paused, muted };
@@ -49,6 +51,8 @@ export default function Playback({ api, config, t, request, ErrorNotice, errorDe
   };
   const resolve = async (queue, from, step = 1, clearNotices = true) => {
     const revision = ++generation.current;
+    hasStarted.current = false;
+    queueDirection.current = step;
     setItems(queue); setIndex(from); setSession(null); setStatus("resolving"); setError(null); setSkipped(null);
     setPosition(0); setStart(0); setStreamRevision(0); setOffset(0); setPaused(false); suppressed.current.clear(); pendingSeek.current = null;
     if (clearNotices) setNotices([]);
@@ -171,16 +175,24 @@ export default function Playback({ api, config, t, request, ErrorNotice, errorDe
     const source = element.getAttribute("src");
     const isCurrent = () => revision === generation.current && video.current === element && element.getAttribute("src") === source;
     if (!isCurrent()) return;
+    let failure = { code: "stream_unavailable" };
     setStatus("playbackError");
-    setError({ code: "stream_unavailable" });
+    setError(failure);
     if (api.getPlayback) {
       try {
         const result = await api.getPlayback(session.session_id);
-        if (isCurrent() && result.error) setError(result.error);
-      } catch (reason) { if (isCurrent()) setError(reason); }
+        if (result.error) failure = result.error;
+      } catch (reason) { failure = reason; }
     }
     if (isCurrent()) {
-      try { await stop(); } catch (reason) { if (isCurrent()) setError(reason); }
+      try { await stop(); } catch (reason) { if (isCurrent()) setError(reason); return; }
+      if (!isCurrent()) return;
+      const following = index + queueDirection.current;
+      if (!hasStarted.current && start === 0 && following >= 0 && following < items.length) {
+        const item = items[index];
+        setNotices((previous) => [...previous, `${item.title || item.url}: ${describe(failure)}`]);
+        await resolve(items, following, queueDirection.current, false);
+      } else setError(failure);
     }
   };
   const next = async () => {
@@ -226,7 +238,7 @@ export default function Playback({ api, config, t, request, ErrorNotice, errorDe
     </form>
     {session && <div className="player-stage panel"><h2>{session.title}</h2>
       <video key={`${session.session_id}:${streamRevision}`} ref={video} src={streamUrl(session.session_id, start, streamRevision)} autoPlay={!paused && start === 0} muted={muted || Boolean(pendingSeek.current)} style={{ visibility: pendingSeek.current ? "hidden" : "visible" }} playsInline aria-label={session.title}
-        onLoadedMetadata={loaded} onCanPlay={completeSeek} onTimeUpdate={timeUpdate} onWaiting={(event) => { if (video.current === event.currentTarget) setStatus("buffering"); }} onPlaying={(event) => { if (video.current === event.currentTarget && !pendingSeek.current) { setStatus("playing"); setPaused(false); } }} onPause={(event) => { if (video.current === event.currentTarget && !pendingSeek.current) { setStatus("paused"); setPaused(true); } }} onEnded={ended} onError={mediaError} />
+        onLoadedMetadata={loaded} onCanPlay={completeSeek} onTimeUpdate={timeUpdate} onWaiting={(event) => { if (video.current === event.currentTarget) setStatus("buffering"); }} onPlaying={(event) => { if (video.current === event.currentTarget && !pendingSeek.current) { hasStarted.current = true; setStatus("playing"); setPaused(false); } }} onPause={(event) => { if (video.current === event.currentTarget && !pendingSeek.current) { setStatus("paused"); setPaused(true); } }} onEnded={ended} onError={mediaError} />
       <div className="card-actions player-controls"><button disabled={Boolean(pendingSeek.current)} onClick={togglePause}>{t(paused ? "resume" : "pause")}</button><button onClick={() => setMuted(!muted)}>{t(muted ? "unmute" : "mute")}</button><button onClick={async () => { try { if (document.fullscreenElement) await document.exitFullscreen(); else await video.current.parentElement.requestFullscreen(); } catch { setError({ code: "fullscreen_unavailable" }); } }}>{t("fullscreen")}</button></div>
       {Number.isFinite(session.duration) && session.duration > 0 ? <label className="player-timeline">{t("position")}<input aria-label={t("position")} type="range" min="0" max={session.duration} step="0.01" value={position} onChange={(event) => seek(Number(event.target.value))} /><span>{clock(position)} / {clock(session.duration)}</span></label> : <p>{t("durationUnknown")}</p>}
       <p className="estimate-hint">{session.height ? `${session.height}p · ` : ""}{t("seekKeyframeHint")}</p>

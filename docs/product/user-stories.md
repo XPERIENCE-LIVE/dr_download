@@ -654,10 +654,10 @@ Aprobada en [ADR-004](../architecture/adr/ADR-004-streaming-playback-and-playlis
 - **Problema:** reproducir vídeo a vídeo exige volver a la lista cada vez.
 - **Precondiciones:** US-067 y US-070 operativas; lista con al menos un ítem.
 - **Flujo principal:** **Reproducir lista** → primer ítem → avance automático al terminar → **Anterior** y **Siguiente** → detener al final.
-- **Flujos alternativos:** ítem que falla al resolverse se salta con aviso que nombra ítem y causa; si fallan todos se detiene con el error; ítem marcado no disponible se salta sin intentar resolverlo.
+- **Flujos alternativos:** ítem que falla al resolverse o en la carga inicial antes de reproducir se salta con aviso que nombra ítem y causa, conservando la dirección solicitada; si fallan todos se detiene con el error; ítem marcado no disponible se salta sin intentar resolverlo. Un fallo después de empezar o durante una búsqueda detiene con error visible.
 - **Given/When/Then:** Given una lista de tres vídeos, When termina el primero, Then empieza el segundo sin intervención. Given un ítem borrado en el proveedor, When le toca, Then se salta con aviso visible y continúa. Given el último ítem, When termina, Then la reproducción se detiene sin repetir.
 - **Prueba unitaria:** `ordered playback skips unavailable/failing entries visibly and stops at the end`; `Previous and Next release the old session and keep the playlist order`.
-- **Prueba de integración:** `a late resolver is stopped after changing videos and on close`; `electron-playback-lifecycle.test.js`. La secuencia completa de vídeos de proveedores en el paquete real sigue pendiente en MAN-US-072.
+- **Prueba de integración:** `a late resolver is stopped after changing videos and on close`; `electron-playback-lifecycle.test.js`. [Revalidación real del paquete](../qa/streaming-followup-validation.md): anterior/siguiente, avance natural y fin de lista comprobados; MAN-US-072 completo sigue pendiente.
 - **Prueba E2E:** `MAN-US-072`: lista mixta YouTube y Vimeo con un ítem no disponible en ES/EN.
 - **Evidencia requerida:** orden reproducido, aviso del ítem saltado y conteo de procesos con configuración, fecha y SHA.
 - **Riesgos:** cada ítem vuelve a resolver streams; aleatorio y repetición están diferidos.

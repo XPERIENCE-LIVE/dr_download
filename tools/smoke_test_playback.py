@@ -6,6 +6,7 @@ import argparse
 from datetime import datetime, timezone
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import platform
@@ -18,6 +19,18 @@ from uuid import uuid4
 import httpx
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def decoded_track_summary(frames):
+    result = {}
+    for kind in ("video", "audio"):
+        times = [float(frame["best_effort_timestamp_time"]) for frame in frames
+                 if frame.get("media_type") == kind and "best_effort_timestamp_time" in frame]
+        assert len(times) >= 2 and all(math.isfinite(value) for value in times), f"Missing decoded {kind} frames"
+        span = max(times) - min(times)
+        assert span >= 0.25, f"Insufficient decoded {kind} duration: {span}"
+        result[kind] = {"frames": len(times), "span_seconds": span}
+    return result
 
 
 def main():
@@ -90,20 +103,23 @@ def main():
                             if first_byte is None:
                                 first_byte = time.monotonic() - stream_start
                             sample.extend(chunk)
-                            if len(sample) >= 2 * 1024 * 1024:
+                            # Include audio after the video keyframe lead-in and a complete MP4 fragment.
+                            if len(sample) >= 8 * 1024 * 1024:
                                 break
                     elapsed = time.monotonic() - stream_start
-                    probe = subprocess.run([environment["DR_DOWNLOAD_FFMPEG"] + "/ffprobe.exe", "-v", "error", "-show_entries",
-                                            "stream=codec_type,codec_name,width,height", "-of", "json", "pipe:0"],
+                    probe = subprocess.run([environment["DR_DOWNLOAD_FFMPEG"] + "/ffprobe.exe", "-v", "error", "-show_frames", "-show_entries",
+                                            "stream=codec_type,codec_name,width,height:frame=media_type,best_effort_timestamp_time", "-of", "json", "pipe:0"],
                                            input=sample, capture_output=True, check=False, timeout=20)
                     metadata = client.get(f"/playback/{session}").json()
                     samples.append({"requested_start": start, "first_byte_seconds": first_byte,
                                     "receive_seconds": elapsed, "bytes": len(sample), "probe_code": probe.returncode,
                                     "sha256": hashlib.sha256(sample).hexdigest(), "session": metadata})
                     assert probe.returncode == 0, samples[-1]
+                    assert metadata.get("error") is None, samples[-1]
                     details = json.loads(probe.stdout)
                     assert {track["codec_type"] for track in details["streams"]} == {"video", "audio"}, details
                     samples[-1]["streams"] = details["streams"]
+                    samples[-1]["decoded"] = decoded_track_summary(details.get("frames", []))
                 with client.stream("GET", f"/playback/{session}/stream", params={"start": 0, "revision": 0}) as stale:
                     assert stale.status_code == 409, "An older browser retry replaced the newer stream"
                     assert json.loads(stale.read())["detail"]["code"] == "playback_cancelled"
