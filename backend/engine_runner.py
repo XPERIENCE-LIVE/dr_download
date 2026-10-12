@@ -8,6 +8,7 @@ import subprocess
 import uuid
 from pathlib import Path
 from typing import Callable
+from urllib.parse import urlsplit, urlunsplit
 
 from .error_mapping import is_browser_cookie_error
 from .config import authorized_cookie_source
@@ -17,6 +18,14 @@ PROGRESS_PREFIX = "__DR_PROGRESS__"
 FILE_PREFIX = "__DR_FILE__"
 TRANSIENT_ATTEMPTS = 3
 FORMAT_ID_PATTERN = r"^[A-Za-z0-9_.:-]{1,128}$"
+
+
+def media_source_url(url: str) -> str:
+    parsed = urlsplit(url)
+    if parsed.hostname in {"vimeo.com", "www.vimeo.com"} and re.fullmatch(r"/[0-9]+/?", parsed.path):
+        # Public videos use the public player metadata route as their primary source.
+        return urlunsplit((parsed.scheme, "player.vimeo.com", "/video/" + parsed.path.strip("/"), parsed.query, parsed.fragment))
+    return url
 
 
 def resolve_node_path() -> str | None:
@@ -96,7 +105,7 @@ def build_command(
         command += ["--format", f"{selected}+ba[ext=m4a]/{selected}+bestaudio/{selected}"]
     else:
         raise ValueError("Unsupported format")
-    command.append(url)
+    command.append(media_source_url(url))
     return command
 
 
@@ -143,9 +152,10 @@ def _terminate_process_tree(process) -> None:
         process.wait(timeout=10)
 
 
-def inspect_with_engine(executable: str | Path, url: str, cookie_source: str) -> dict:
+def inspect_with_engine(executable: str | Path, url: str, cookie_source: str, *, run_process=None) -> dict:
     command = [
         str(executable),
+        "--ignore-config",
         "--dump-single-json",
         "--no-playlist",
         "--no-warnings",
@@ -155,8 +165,8 @@ def inspect_with_engine(executable: str | Path, url: str, cookie_source: str) ->
     cookie_source = authorized_cookie_source(cookie_source)
     if cookie_source != "none":
         command += ["--cookies-from-browser", cookie_source]
-    command.append(url)
-    result = subprocess.run(
+    command.append(media_source_url(url))
+    result = (run_process or subprocess.run)(
         command, capture_output=True, text=True, timeout=90, check=False,
         creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )

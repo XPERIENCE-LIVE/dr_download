@@ -45,49 +45,49 @@
       "id": "US-067",
       "status": "open",
       "fingerprint": "ad-free-stream-playback-v1",
-      "regression_tests": [],
+      "regression_tests": ["test_selects_supported_video_audio_without_drm", "test_rejects_live_or_protected_media", "test_session_expiry_is_explicit", "test_session_metadata_never_exposes_upstream_urls_or_headers", "test_bundled_ffmpeg_stream_is_decodable_and_owned_process_stops", "stream-protocol.test.js", "electron-playback-lifecycle.test.js"],
       "evidence": [],
-      "blocking_reason": "Sin implementar (fase 1 de ADR-004); falta spike de entrega medido y MAN-US-067. Publicación firmada bloqueada hasta revisar condiciones de SignPath."
+      "blocking_reason": "Implementado; falta aceptación del paquete real MAN-US-067, métricas completas y evidencia aprobatoria ligada al mismo SHA. Publicación firmada bloqueada hasta revisar condiciones de SignPath."
     },
     {
       "id": "US-068",
       "status": "open",
       "fingerprint": "stream-seek-by-restart-v1",
-      "regression_tests": [],
+      "regression_tests": ["test_seek_accepts_finite_decimal_seconds", "test_seek_rejects_untrusted_values", "test_new_stream_cleanup_cannot_kill_a_replacement", "test_late_seek_cannot_replace_the_latest_request", "seek discards the decoded keyframe lead-in before resuming at the requested decimal", "seeking while paused keeps playback paused and restores the Resume control"],
       "evidence": [],
-      "blocking_reason": "Sin implementar (fase 2 de ADR-004); falta MAN-US-068."
+      "blocking_reason": "Implementado; faltan métricas reales completas y MAN-US-068 del mismo paquete/SHA."
     },
     {
       "id": "US-069",
       "status": "open",
       "fingerprint": "sponsorblock-consented-skip-v1",
-      "regression_tests": [],
+      "regression_tests": ["test_sponsorblock_queries_hash_prefix_only_when_consented", "SponsorBlock skip has undo that permits watching the skipped segment", "SponsorBlock permission is enabled only after a successful persisted confirmation", "a successful SponsorBlock lookup without segments is visible"],
       "evidence": [],
-      "blocking_reason": "Sin implementar (fase 6 de ADR-004); falta verificar sponsorblock_chapters del motor y MAN-US-069."
+      "blocking_reason": "Implementado con API hash-prefix; faltan prueba real con segmento/servicio caído y MAN-US-069 del mismo paquete/SHA."
     },
     {
       "id": "US-070",
       "status": "open",
       "fingerprint": "local-playlists-crud-v1",
-      "regression_tests": [],
+      "regression_tests": ["test_playlist_crud_persists_and_preserves_downloads", "test_playlist_items_keep_order_allow_duplicates_and_cascade", "test_playlist_missing_resources_and_storage_failure_are_visible", "create, rename and remove operations refresh persistent list state", "playlist deletion requires explicit confirmation and failures remain visible"],
       "evidence": [],
-      "blocking_reason": "Sin implementar (fase 3 de ADR-004); falta MAN-US-070."
+      "blocking_reason": "Implementado; falta persistencia/reinicio del paquete real y MAN-US-070 del mismo SHA."
     },
     {
       "id": "US-071",
       "status": "open",
       "fingerprint": "bounded-playlist-import-v1",
-      "regression_tests": [],
+      "regression_tests": ["test_import_over_500_rolls_back_everything", "test_import_exactly_500_entries_succeeds_atomically", "test_cancel_import_just_before_commit_is_atomic", "test_cancel_already_committed_import_reports_completion_without_removing_it", "test_cancel_import_terminates_real_owned_child_and_closes_pipes", "test_revoked_cookie_consent_before_commit_prevents_import", "import cancellation uses the same request UUID and ignores the late result", "a successful import stops being cancellable before the list refresh finishes", "cancel after backend commit refreshes the completed import without claiming cancellation"],
       "evidence": [],
-      "blocking_reason": "Sin implementar (fase 5 de ADR-004); falta MAN-US-071."
+      "blocking_reason": "Implementado; faltan lista real de 500 entradas/latencia, proveedores y MAN-US-071 del mismo paquete/SHA."
     },
     {
       "id": "US-072",
       "status": "open",
       "fingerprint": "ordered-playlist-playback-v1",
-      "regression_tests": [],
+      "regression_tests": ["ordered playback skips unavailable/failing entries visibly and stops at the end", "Previous and Next release the old session and keep the playlist order", "a late resolver is stopped after changing videos and on close", "electron-playback-lifecycle.test.js"],
       "evidence": [],
-      "blocking_reason": "Sin implementar (fase 4 de ADR-004); falta MAN-US-072."
+      "blocking_reason": "Implementado; falta la secuencia completa de proveedores en el paquete real MAN-US-072 del mismo SHA."
     },
     {
       "id": "BUG-001",

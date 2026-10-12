@@ -52,3 +52,8 @@ test("preserves structured backend errors and their recovery advice", async () =
     detail: { code: "busy", message: "Motor ocupado.", recovery: "Reintenta." }
   });
 });
+
+test("accepts an authenticated HTTP 204 without trying to decode JSON", async () => {
+  server.on("request", (_request, response) => { response.writeHead(204); response.end(); });
+  await expect(requestBackend(baseUrl, "session-token", "deleteDownload", ["one"])).resolves.toBeNull();
+});

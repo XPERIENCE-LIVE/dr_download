@@ -1,5 +1,6 @@
 import subprocess
 import threading
+import json
 from pathlib import Path
 from unittest.mock import patch
 
@@ -19,6 +20,21 @@ from backend.engine_runner import (
     standard_filename,
     unique_destination,
 )
+
+
+def test_public_vimeo_uses_same_primary_media_url_for_inspection_and_download(monkeypatch, tmp_path):
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node")
+    monkeypatch.setenv("DR_DOWNLOAD_NODE", str(node))
+    calls = []
+    def run(command, **kwargs):
+        calls.append(command)
+        return subprocess.CompletedProcess(command, 0, json.dumps({"title": "public"}), "")
+    with patch("backend.engine_runner.subprocess.run", run):
+        inspect_with_engine("yt-dlp.exe", "https://vimeo.com/76979871?autoplay=1", "none")
+    download = build_command("yt-dlp.exe", "https://vimeo.com/76979871?autoplay=1", "video-best", str(tmp_path), "none")
+    assert calls[0][-1] == download[-1] == "https://player.vimeo.com/video/76979871?autoplay=1"
+    assert "--ignore-config" in calls[0]
 
 
 @pytest.fixture(autouse=True)

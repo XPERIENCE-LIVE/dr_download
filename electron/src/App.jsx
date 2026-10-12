@@ -1,11 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { translator } from "./i18n";
+import Playback from "./components/Playback";
+import Playlists from "./components/Playlists";
 import "./styles/main.css";
 
 const ACTIVE = new Set(["queued", "inspecting", "downloading", "postprocessing"]);
 const defaultConfig = {
   theme: "dark", language: "es", cookie_source: "edge", cookie_consent: false, notifications: true,
-  output_dir: "", default_format: "video"
+  output_dir: "", default_format: "video", sponsorblock_consent: false
 };
 
 export function findNewCompletions(previous, current) {
@@ -33,7 +35,7 @@ function Icon({ name }) {
   const paths = {
     new: "M12 5v14M5 12h14", queue: "M5 6h14M5 12h14M5 18h9", history: "M12 8v5l3 2M4 12a8 8 0 1 0 2-5.3L4 9",
     settings: "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19 12l2-1-2-3-2 .5-1-1.5.5-2L12 2 9 3l.5 2-1.5 1-2-.5-2 3 2 1v2l-2 1 2 3 2-.5 1.5 1-.5 2 3 1 3-1-.5-2 1.5-1 2 .5 2-3-2-1v-2Z",
-    about: "M12 11v6M12 7h.01"
+    about: "M12 11v6M12 7h.01", player: "M8 5v14l11-7Z", playlists: "M5 5h14M5 11h14M5 17h8M17 15v6M14 18h6"
   };
   return <svg aria-hidden="true" viewBox="0 0 24 24"><path d={paths[name]} /></svg>;
 }
@@ -68,7 +70,7 @@ function SignalLine({ progress, status = "queued", label }) {
   );
 }
 
-function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck, downloads, setDownloads, setView, requestedUrl, configLoaded, t }) {
+function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck, downloads, setDownloads, setView, requestedUrl, configLoaded, onPlay, onAddToList, t }) {
   const [url, setUrl] = useState("");
   const [media, setMedia] = useState(null);
   const [formatId, setFormatId] = useState("video-best");
@@ -176,7 +178,7 @@ function NewDownload({ api, config, setConfig, directoryCheck, setDirectoryCheck
         <ErrorNotice reason={error} t={t}><div className="card-actions"><button className="secondary" disabled={Boolean(busy)} onClick={inspect}>{t("reinspect")}</button><button className="secondary" onClick={() => setView("settings")}>{t("settings")}</button></div></ErrorNotice>
         {media && <article className="media-summary">
           <div className="media-thumb">{media.thumbnail ? <img src={media.thumbnail} alt="" /> : <span>DD</span>}<div className="duration">{formatDuration(media.duration)}</div></div>
-          <div className="media-info"><p className="eyebrow">{t("inspected")}</p><h2>{media.title}</h2><p>{media.author}</p></div>
+          <div className="media-info"><p className="eyebrow">{t("inspected")}</p><h2>{media.title}</h2><p>{media.author}</p><div className="card-actions"><button disabled={Boolean(busy)} onClick={() => onPlay([{ url: url.trim(), title: media.title, available: true }], 0)}>{t("play")}</button><button disabled={Boolean(busy)} onClick={() => onAddToList({ url: url.trim(), title: media.title, duration: media.duration, thumbnail: media.thumbnail })}>{t("addToList")}</button></div></div>
         </article>}
       </section>
       <aside className="output-patch panel">
@@ -269,6 +271,17 @@ function Settings({ config, setConfig, api, externalBusy, onBusyChange, t }) {
     catch (reason) { setError(reason); }
     finally { setBusy(""); }
   };
+  const saveSponsorConsent = async () => {
+    if (disabled) return;
+    const consent = config.sponsorblock_consent !== true;
+    setBusy("saving"); onBusyChange(true); setError(null); setSuccess("");
+    try {
+      await api.updateConfig({ ...config, sponsorblock_consent: consent });
+      setConfig((current) => ({ ...current, sponsorblock_consent: consent }));
+      setSuccess(consent ? "saved" : "consentRevoked");
+    } catch (reason) { setError(reason); }
+    finally { setBusy(""); onBusyChange(false); }
+  };
   return <section className="workspace"><header className="workspace-header"><div><p className="eyebrow">{t("localData")}</p><h1>{t("settings")}</h1></div></header><div className="settings-grid panel">
     <label>{t("language")}<select disabled={disabled} value={config.language} onChange={(event) => update("language", event.target.value)}><option value="es">Español</option><option value="en">English</option></select></label>
     <label>{t("browser")}<select disabled={disabled} value={config.cookie_source} onChange={(event) => update("cookie_source", event.target.value)}><option value="edge">Microsoft Edge</option><option value="firefox">Mozilla Firefox</option><option value="none">{t("noCookies")}</option></select></label>
@@ -276,6 +289,7 @@ function Settings({ config, setConfig, api, externalBusy, onBusyChange, t }) {
     <button disabled={disabled} className="primary" onClick={() => save()}>{t(busy === "saving" ? "saving" : "save")}</button>
     <button disabled={disabled} onClick={exportDiagnostics}>{t(busy === "exporting" ? "exporting" : "exportDiagnostics")}</button>
     {config.cookie_consent && <button disabled={disabled} onClick={() => save(true)}>{t("revokeConsent")}</button>}
+    <div className="sponsor-consent"><strong>{t("sponsorConsentTitle")}</strong><p>{t("sponsorConsentBody")}</p><button disabled={disabled} onClick={saveSponsorConsent}>{t(config.sponsorblock_consent === true ? "revokeSponsorConsent" : "allowSponsorConsent")}</button></div>
   </div><ErrorNotice reason={error} t={t} />{success && <p role="status">{t(success)}</p>}</section>;
 }
 
@@ -306,6 +320,9 @@ export default function App() {
   const [consentError, setConsentError] = useState(null);
   const [settingsBusy, setSettingsBusy] = useState(false);
   const [requestedUrl, setRequestedUrl] = useState(null);
+  const [playbackRequest, setPlaybackRequest] = useState(null);
+  const [playerOpened, setPlayerOpened] = useState(false);
+  const [playlistItem, setPlaylistItem] = useState(null);
   const previousStatuses = useRef({});
   const downloadsLoaded = useRef(false);
   const mounted = useRef(false);
@@ -314,6 +331,7 @@ export default function App() {
   const downloadsSnapshot = useRef("[]");
   const lastLoadError = useRef("");
   const t = useMemo(() => translator(config.language), [config.language]);
+  useEffect(() => { if (view === "player") setPlayerOpened(true); }, [view]);
   const refresh = useCallback(() => {
     if (!api) return Promise.resolve([]);
     if (inFlight.current) return inFlight.current;
@@ -413,11 +431,13 @@ export default function App() {
     return () => { stopped = true; clearTimeout(timer); document.removeEventListener("visibilitychange", onVisibilityChange); };
   }, [api, refresh, hasActiveDownloads]);
 
-  const nav = ["new", "queue", "history", "settings", "about"];
+  const nav = ["new", "queue", "history", "settings", "about", "player", "playlists"];
   const activeTransfer = activeDownloads.find((item) => item.status !== "queued") || activeDownloads[0];
   const appError = configError || loadError;
   const connection = !api || appError ? "engineUnavailable" : configLoaded && historyLoaded ? "engineReady" : "connecting";
   const inspectAgain = (url) => { setRequestedUrl({ url: url || "" }); setView("new"); };
+  const play = (items, index) => { setPlaybackRequest({ items, index }); setView("player"); };
+  const addToList = (item) => { setPlaylistItem(item); setView("playlists"); };
   const allowCookies = async () => {
     if (consentBusy || settingsBusy) return;
     setConsentBusy(true); setConsentError(null);
@@ -431,9 +451,11 @@ export default function App() {
   return <div className={`app-shell${activeTransfer ? " has-transfer" : ""}`}>
     <header className="deck-topbar"><div className="brand"><div className="brand-monogram">D<span>↓</span></div><div><strong>Dr. Download</strong><small>{t("mediaTool")}</small></div></div><nav aria-label={t("navigation")}>{nav.map((name) => <button key={name} className={view === name ? "active" : ""} onClick={() => setView(name)}><Icon name={name} /><span>{t(name)}</span>{name === "queue" && hasActiveDownloads && <b>{activeDownloads.length}</b>}</button>)}</nav><div className={`engine-ready engine-${connection}`} role="status"><span className="pulse" />{t(connection)}</div></header>
     <main><ErrorNotice reason={appError} t={t}><button className="secondary" onClick={() => { if (configError) loadConfiguration(); refresh().catch(() => { /* refresh displays the failure. */ }); }}>{t("retry")}</button></ErrorNotice>
-      <div hidden={view !== "new"}><NewDownload api={api} config={config} setConfig={setConfig} directoryCheck={directoryCheck} setDirectoryCheck={setDirectoryCheck} downloads={downloads} setDownloads={updateDownloads} setView={setView} requestedUrl={requestedUrl} configLoaded={configLoaded} t={t} /></div>
+      <div hidden={view !== "new"}><NewDownload api={api} config={config} setConfig={setConfig} directoryCheck={directoryCheck} setDirectoryCheck={setDirectoryCheck} downloads={downloads} setDownloads={updateDownloads} setView={setView} requestedUrl={requestedUrl} configLoaded={configLoaded} onPlay={play} onAddToList={addToList} t={t} /></div>
       {["queue", "history"].includes(view) && <DownloadsView mode={view} downloads={downloads} api={api} refresh={refreshAfterAction} setView={setView} inspectAgain={inspectAgain} t={t} />}
-      <div hidden={view !== "settings"}><Settings config={config} setConfig={setConfig} api={api} externalBusy={consentBusy || !configLoaded} onBusyChange={setSettingsBusy} t={t} /></div>{view === "about" && <About t={t} />}</main>
+      <div hidden={view !== "settings"}><Settings config={config} setConfig={setConfig} api={api} externalBusy={consentBusy || !configLoaded} onBusyChange={setSettingsBusy} t={t} /></div>{view === "about" && <About t={t} />}
+      {(view === "player" || playerOpened) && <div hidden={view !== "player"}><Playback api={api} config={config} t={t} request={playbackRequest} ErrorNotice={ErrorNotice} errorDetails={errorDetails} /></div>}
+      {view === "playlists" && configLoaded && <Playlists api={api} config={config} t={t} pendingItem={playlistItem} onPlay={play} ErrorNotice={ErrorNotice} />}</main>
     <TransferStrip item={activeTransfer} t={t} />
     {configLoaded && !config.cookie_consent && config.cookie_source !== "none" && <div className="consent"><div><strong>{t("consentTitle")}</strong><p>{t("consentBody")}</p><ErrorNotice reason={consentError} t={t} /></div><button disabled={consentBusy || settingsBusy} className="primary" onClick={allowCookies}>{t(consentBusy ? "consentSaving" : "consent")}</button></div>}
   </div>;

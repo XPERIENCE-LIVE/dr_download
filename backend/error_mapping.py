@@ -17,6 +17,18 @@ def is_browser_cookie_error(message: str) -> bool:
 def classify_error(message: str, cookie_source: str = "none") -> dict[str, str]:
     text = (message or "").lower()
     browser = "Edge" if cookie_source == "edge" else "Firefox"
+    if any(marker in text for marker in ("drm protected", "drm-protected", "drm protection", "skd://")):
+        return {
+            "code": "drm_protected",
+            "message": "El vídeo está protegido mediante DRM.",
+            "recovery": "Elige un vídeo público sin DRM; la aplicación no elude esa protección.",
+        }
+    if any(marker in text for marker in ("403 forbidden", "http error 403", "only works when logged-in")):
+        return {
+            "code": "source_access_denied",
+            "message": "El proveedor rechazó el acceso al vídeo o a su audio.",
+            "recovery": "Vuelve a cargar el enlace y comprueba que puedas verlo en el proveedor con los permisos necesarios.",
+        }
     if "browser consent required" in text:
         return {
             "code": "browser_consent_required",

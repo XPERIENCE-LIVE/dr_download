@@ -238,3 +238,34 @@ main { min-width: 0; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
+
+.deck-topbar { grid-template-columns: 180px minmax(0, 1fr) 155px; gap: 10px; }
+.deck-topbar nav { overflow-x: auto; justify-content: flex-start; }
+.deck-topbar nav button { flex-shrink: 0; padding-inline: 9px; }
+.player-composer, .player-stage, .playlist-library, .playlist-detail { padding: 24px; }
+.player-stage { margin-top: 20px; }
+.player-stage h2 { margin: 0 0 18px; font: 500 23px Bahnschrift, "Segoe UI", sans-serif; }
+.player-stage video { display: block; width: 100%; max-height: 60vh; background: #000; }
+.player-stage:fullscreen { display: flex; flex-direction: column; overflow: auto; background: var(--carbon); }
+.player-stage:fullscreen video { flex: 1; min-height: 0; max-height: calc(100vh - 230px); }
+.player-controls { margin-bottom: 20px; }
+.playback-quality { display: flex !important; align-items: center; gap: 14px; margin-top: 14px; color: var(--muted); font-size: 12px; }
+.player-timeline { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 12px; }
+.player-timeline input { flex: 1; accent-color: var(--mint); min-width: 150px; }
+.player-timeline span { font: 11px "Cascadia Mono", monospace; }
+.playback-notices { padding-left: 34px; line-height: 1.7; }
+.playlist-layout { display: grid; grid-template-columns: minmax(280px, .65fr) minmax(0, 1.35fr); gap: 20px; align-items: start; }
+.playlist-layout label { display: block; margin: 20px 0 8px; color: #c2bbc9; font-size: 12px; }
+.playlist-layout label:first-child { margin-top: 0; }
+.playlist-library select { width: 100%; }
+.playlist-library .url-row { grid-template-columns: minmax(0, 1fr); }
+.playlist-import { margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--line); }
+.playlist-import .estimate-hint { margin: 12px 0; line-height: 1.6; }
+.playlist-items { padding-left: 25px; }
+.playlist-items li { padding: 18px 0; border-bottom: 1px solid var(--line); }
+.playlist-items strong, .playlist-items small { display: block; overflow-wrap: anywhere; }
+.playlist-items small { color: var(--muted); margin-top: 6px; font-size: 11px; }
+.sponsor-consent { grid-column: 1 / -1; padding-top: 22px; border-top: 1px solid var(--line); }
+.sponsor-consent p { color: var(--muted); max-width: 700px; line-height: 1.6; font-size: 12px; }
+@media (max-width: 1040px) { .deck-topbar { grid-template-columns: 150px minmax(0, 1fr); } .deck-topbar .engine-ready { display: none; } }
+@media (max-width: 820px) { .deck-topbar { grid-template-columns: 40px minmax(0, 1fr); } .playlist-layout { grid-template-columns: 1fr; } }

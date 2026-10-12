@@ -40,6 +40,11 @@ import os
 
 setup_logging()
 app = FastAPI()
+from .playback_routes import router as playback_router
+from .playback_service import manager as playback_manager
+from .playlist_routes import router as playlist_router, shutdown_imports
+app.include_router(playback_router)
+app.include_router(playlist_router)
 SESSION_TOKEN = os.getenv("DR_DOWNLOAD_TOKEN", "")
 
 
@@ -155,7 +160,7 @@ def _not_found():
 
 
 @app.post("/media/inspect")
-async def inspect_media_endpoint(request: InspectRequest):
+def inspect_media_endpoint(request: InspectRequest):
     if request.cookie_source not in COOKIE_SOURCES:
         raise HTTPException(status_code=400, detail="Unsupported cookie source")
     if request.cookie_source != authorized_cookie_source(request.cookie_source):
@@ -294,11 +299,15 @@ async def update_config(config: ConfigUpdate):
 @app.post("/shutdown/")
 async def shutdown():
     """Stop worker threads and shut down the server."""
+    playback_manager.shutdown()
+    shutdown_imports()
     shutdown_workers()
     return {"status": "stopping"}
 
 
 app.add_event_handler("shutdown", shutdown_workers)
+app.add_event_handler("shutdown", playback_manager.shutdown)
+app.add_event_handler("shutdown", shutdown_imports)
 
 
 def start_engine_updater():

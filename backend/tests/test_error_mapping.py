@@ -13,8 +13,13 @@ from backend.error_mapping import classify_error
         ("Requested format is not available", "none", "format_unavailable"),
         ("FFmpeg is unavailable", "none", "ffmpeg_missing"),
         ("network timeout while reading", "none", "network_error"),
+        ("Server returned 403 Forbidden (access denied)", "none", "source_access_denied"),
+        ("The web client only works when logged-in", "none", "source_access_denied"),
         ("extractor exploded", "none", "engine_error"),
         ("Browser consent required", "edge", "browser_consent_required"),
+        ("ERROR: This video is DRM protected", "none", "drm_protected"),
+        ("ERROR: This video is DRM-protected", "none", "drm_protected"),
+        ("Unable to open encrypted media: skd://secret-license", "none", "drm_protected"),
     ],
 )
 def test_classify_error_returns_safe_actionable_codes(message, cookie_source, code):
