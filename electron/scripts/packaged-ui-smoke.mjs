@@ -119,7 +119,7 @@ await command("Runtime.enable");
 await waitFor("Boolean(document.querySelector('#media-url'))", 30000);
 
 const navigation = await evaluate("[...document.querySelectorAll('nav button')].map((button) => button.textContent.trim())");
-assert.deepEqual(navigation.slice(0, 5), ["Nueva descarga", "Cola", "Historial", "Ajustes", "Acerca de"]);
+assert.deepEqual(navigation, ["Nueva descarga", "Cola", "Historial", "Ajustes", "Acerca de", "Reproductor", "Listas"]);
 await waitFor("document.querySelector('.engine-ready')?.textContent.includes('MOTOR LOCAL LISTO')", 30000);
 const configuredOutput = await evaluate("window.drDownload.getConfig().then(config => config.output_dir)");
 assert.equal(configuredOutput, outputDir, "Backend configuration is not isolated; refusing to change settings or download");
@@ -153,7 +153,7 @@ await waitFor("[...document.querySelectorAll('h1')].find(item => item.getClientR
 await setValue(".settings-grid select", "en");
 await waitFor("[...document.querySelectorAll('h1')].find(item => item.getClientRects().length)?.textContent === 'Settings'");
 const englishNavigation = await evaluate("[...document.querySelectorAll('nav button span')].map((item) => item.textContent.trim())");
-assert.deepEqual(englishNavigation, ["New download", "Queue", "History", "Settings", "About"]);
+assert.deepEqual(englishNavigation, ["New download", "Queue", "History", "Settings", "About", "Player", "Playlists"]);
 assert.equal(await clickButton("Save changes"), true);
 await waitFor("window.drDownload.getConfig().then(config => config.language === 'en')", 10000);
 await waitFor("document.body.innerText.includes('Changes saved')", 10000);

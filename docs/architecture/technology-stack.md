@@ -15,6 +15,8 @@
 | Empaquetado | electron-builder, NSIS, PyInstaller | open source |
 | Actualizaciones | GitHub Releases o servidor estático compatible | sin servicio propietario obligatorio |
 
+La reproducción y las listas de [ADR-004](adr/ADR-004-streaming-playback-and-playlists.md) reutilizan yt-dlp, FFmpeg, FastAPI `StreamingResponse`, `httpx` y SQLite; no añaden dependencias. SponsorBlock (API pública comunitaria) es un servicio externo **opcional**, gratuito, desactivado por defecto y sujeto a consentimiento; su ausencia no impide reproducir.
+
 ## Perfil 100% open source y coste cero
 
 - No se requieren APIs de pago, cuentas, nube, telemetría ni servicios propietarios.

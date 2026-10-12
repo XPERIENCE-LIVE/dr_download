@@ -1,6 +1,6 @@
 # Dr. Download
 
-Aplicación privada para Windows que inspecciona, organiza y descarga contenido multimedia mediante yt-dlp. La interfaz Electron/React administra un backend FastAPI local; los datos, preferencias e historial permanecen en el equipo.
+Aplicación privada para Windows que inspecciona, organiza, descarga y reproduce contenido multimedia mediante yt-dlp. La interfaz Electron/React administra un backend FastAPI local; los datos, preferencias, listas e historial permanecen en el equipo.
 
 Se instala y ejecuta directamente en Windows como aplicación de escritorio, sin VM, Docker, Python ni Node externos. Electron usa tecnologías web para la interfaz; no es una interfaz WinUI/C++ reescrita. Una VM limpia es solo una opción para probar la instalación sin herramientas de desarrollo; un equipo físico limpio sirve para la misma comprobación.
 
@@ -18,6 +18,14 @@ Se instala y ejecuta directamente en Windows como aplicación de escritorio, sin
 - Renderer aislado: IPC enumerado, token de sesión, sandbox y CSP.
 
 Descarga únicamente contenido que tengas autorización para guardar. Dr. Download no elude DRM.
+
+### Reproducción y listas — implementación en esta rama
+
+**Reproductor** permite pegar un enlace individual de YouTube o Vimeo o pulsar **Reproducir** después de analizarlo. Usa FFmpeg incluido y un stream local privado; no carga el reproductor oficial, sus scripts ni sus anuncios. La barra de posición admite segundos decimales. Las promociones grabadas dentro del vídeo pueden permanecer; saltarlas con SponsorBlock es opcional y exige autorización separada y guardada en Ajustes.
+
+**Listas** permite crear, renombrar, añadir enlaces, quitar entradas y borrar con confirmación. Las listas persisten en SQLite y se reproducen en orden, con anterior/siguiente, aviso de vídeos omitidos y parada al final. También se puede importar una lista de hasta 500 entradas con cancelación y sin guardado parcial.
+
+El [contrato](docs/product/playback-and-playlists.md), los [contratos API/IPC](docs/architecture/api-contract.md) y el [inventario de pruebas](docs/qa/streaming-validation.md) describen la implementación. Las seis historias conservan estado `partial`: aún requieren aceptación en el paquete real Windows 10/11 y métricas completas. Esto no certifica un instalador publicado. Reproducir YouTube fuera de su reproductor incumple sus Términos de Servicio y usar cookies de tu cuenta puede provocar restricciones del proveedor. DRM y emisiones en directo se rechazan; un proveedor también puede exigir una sesión o impedir la extracción.
 
 ## Desarrollo
 
@@ -67,6 +75,14 @@ Prueba real autorizada (primero inspección, luego descarga opcional):
 python tools/smoke_test_download.py "https://youtu.be/ID" --cookie-source edge
 python tools/smoke_test_download.py "https://youtu.be/ID" --mode audio --cookie-source edge
 ```
+
+Smoke de reproducción real con backend y herramientas incluidos, fuentes públicas autorizadas y datos aislados:
+
+```powershell
+python tools/smoke_test_playback.py --url "https://www.youtube.com/watch?v=aqz-KE-bpKQ" --url "https://vimeo.com/1084537" --playlist-url "https://www.youtube.com/playlist?list=PLBB231211A4F62143"
+```
+
+[Resultados y límites de la ejecución real](docs/qa/streaming-implementation-validation.md). Genera evidencia en `artifacts/quality/streaming-implementation/real-api`. Un fallo del proveedor conserva el fallo; no equivale a aceptación de la GUI ni del instalador.
 
 ## Instalador Windows
 

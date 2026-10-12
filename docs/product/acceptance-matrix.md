@@ -38,5 +38,11 @@ Estados: `covered` tiene evidencia automatizada suficiente; `partial` tiene cobe
 | US-064 | workflow-ux + preload-errors: recuperación, idioma y rechazo IPC message/detail; aceptación pendiente | errores reales y diagnóstico redactado ES/EN | partial | MAN-US-064 pending |
 | US-065 | workflow-ux + API/queue/engine: consentimiento por fuente, revocación y recheck; persistencia real pendiente | fallo de guardado/navegación, cambio de navegador, revocación, cola y retry | partial | MAN-US-065 pending |
 | US-066 | workflow-ux.test.jsx: búsqueda, estado y repetición; ejecución verde pendiente | repetir con archivos protegidos y filtros ES/EN | partial | MAN-US-066 pending |
+| US-067 | test_playback.py; stream-protocol y electron-playback-lifecycle; [inventario](../qa/streaming-validation.md) | YouTube 1080p y Vimeo, inicio ≤ 8 s, sin reproductor/anuncios oficiales ni procesos al cerrar | partial | aceptación del paquete y MAN-US-067 pending |
+| US-068 | test_playback.py; playback-playlists y stream-protocol: decimales, offset real, reemplazo | búsqueda ≤ 5 s, posición absoluta y un solo proceso | partial | métricas reales completas y MAN-US-068 pending |
+| US-069 | test_playback.py y playback-playlists: consentimiento, segmentos, omisión y deshacer | salto con consentimiento, sin peticiones sin consentimiento y servicio caído visible | partial | servicio/segmento real y MAN-US-069 pending |
+| US-070 | test_playlists.py; playback-playlists y streaming-contract: CRUD/errores/duplicados | CRUD, aviso de repetición, fallo de escritura y persistencia tras reinicio | partial | reinicio del paquete y MAN-US-070 pending |
+| US-071 | test_playlists.py: 500/501, procesos reales controlados, cancelación/commit; UI/protocolo | importación YouTube/Vimeo, límite 500, no disponibles y cancelación atómica | partial | lista real de 500/latencia y MAN-US-071 pending |
+| US-072 | playback-playlists: orden, avance, aviso, anterior/siguiente y fin; lifecycle | orden, avance automático, ítem saltado con aviso y parada al final | partial | lista mixta real y MAN-US-072 pending |
 
 El responsable de QA cambia el estado únicamente después de enlazar evidencia reproducible en `docs/qa/traceability-matrix.md`.

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, Notification, dialog, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, Menu, Notification, dialog, ipcMain, shell, protocol } = require("electron");
 const crypto = require("crypto");
 const fs = require("fs");
 const net = require("net");
@@ -11,11 +11,18 @@ const { resolveFfmpegDirectory, resolveNodeExecutable } = require("./runtime-pat
 const { configureNavigationGuards, isTrustedSender, secureWebPreferences } = require("./electron-security");
 const { writeDiagnosticReport } = require("./diagnostics");
 const { resolveBackendCommand, resolveRendererEntry } = require("./runtime-contract");
+const { createStreamHandler } = require("./stream-protocol");
+
+protocol.registerSchemesAsPrivileged([
+  { scheme: "dr-stream", privileges: { standard: true, secure: true, stream: true } }
+]);
 
 let mainWindow;
 let backendProcess;
 let backendPort;
 let sessionToken;
+let shuttingDown = false;
+let shutdownComplete = false;
 
 function findFreePort() {
   return new Promise((resolve, reject) => {
@@ -122,15 +129,34 @@ function createWindow() {
 }
 
 async function stopBackend() {
-  if (!backendProcess) return;
+  const child = backendProcess;
+  if (!child) return;
   try {
-    await fetch(`http://127.0.0.1:${backendPort}/shutdown/`, {
-      method: "POST", headers: { "X-Dr-Download-Token": sessionToken }
+    const response = await fetch(`http://127.0.0.1:${backendPort}/shutdown/`, {
+      method: "POST", headers: { "X-Dr-Download-Token": sessionToken }, signal: AbortSignal.timeout(10000)
     });
+    if (!response.ok) throw new Error("Shutdown rejected");
   } catch (error) {
     console.error("Backend rejected the graceful shutdown request", error.name);
   }
-  if (backendProcess) backendProcess.kill();
+  if (child.exitCode === null && child.signalCode === null) {
+    await new Promise((resolve) => {
+      const finished = () => { clearTimeout(timer); child.removeListener("exit", finished); resolve(); };
+      const timer = setTimeout(finished, 5000);
+      child.once("exit", finished);
+    });
+  }
+  if (backendProcess === child && child.exitCode === null && child.signalCode === null) {
+    if (process.platform === "win32") {
+      await new Promise((resolve) => {
+        const killer = spawn("taskkill", ["/PID", String(child.pid), "/T", "/F"], {
+          windowsHide: true, stdio: "ignore", signal: AbortSignal.timeout(5000)
+        });
+        killer.once("exit", resolve);
+        killer.once("error", resolve);
+      });
+    } else child.kill();
+  }
 }
 
 app.whenReady().then(async () => {
@@ -138,6 +164,7 @@ app.whenReady().then(async () => {
   registerIpc();
   try {
     await startBackend();
+    protocol.handle("dr-stream", createStreamHandler(`http://127.0.0.1:${backendPort}`, sessionToken));
     createWindow();
     configureAppUpdater({
       app,
@@ -150,7 +177,13 @@ app.whenReady().then(async () => {
   }
 });
 
-app.on("before-quit", stopBackend);
+app.on("before-quit", (event) => {
+  if (shutdownComplete || !backendProcess) return;
+  event.preventDefault();
+  if (shuttingDown) return;
+  shuttingDown = true;
+  void stopBackend().finally(() => { shutdownComplete = true; app.quit(); });
+});
 app.on("window-all-closed", () => { if (process.platform !== "darwin") app.quit(); });
 app.on("activate", () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 

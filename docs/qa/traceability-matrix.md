@@ -38,6 +38,12 @@ Formato: `Historia | contrato | símbolo/componente | prueba actual | evidencia 
 | US-064 | códigos traducidos/rechazo IPC message/detail | i18n/App/DownloadCard/main/preload | workflow-ux + preload-errors: errores, idioma y serialización | MAN-US-064 | Unreleased | partial |
 | US-065 | PUT config/HTTP403 consentimiento vigente | App/Settings/NewDownload/config/queue/engine | workflow-ux + API/queue/engine: fuente, revocación y recheck; persistencia real pendiente | MAN-US-065 | Unreleased | partial |
 | US-066 | ADR-003/filtro y repetición local | History/NewDownload/downloader | workflow-ux.test.jsx: search/filter/duplicate; verde pendiente | MAN-US-066 | Unreleased | partial |
+| US-067 | ADR-004/stream combinado sin reproductor oficial | playback_service/playback_routes/stream-protocol/Playback | test_playback.py + stream-protocol + electron-playback-lifecycle; [inventario y límites](streaming-validation.md) | MAN-US-067 | Unreleased | partial |
+| US-068 | ADR-004/búsqueda decimal por reinicio y posición absoluta | playback_service/playback_routes/getPlayback/Playback | test_playback.py + playback-playlists: offset real/local seek/pausa; stream-protocol | MAN-US-068 | Unreleased | partial |
+| US-069 | ADR-004/SponsorBlock con consentimiento propio | playback_service/config/Settings/Playback | test_playback.py + playback-playlists: consentimiento confirmado, omisión/deshacer y no_segments | MAN-US-069 | Unreleased | partial |
+| US-070 | ADR-004/listas SQLite locales | store/playlist_routes/IPC/Playlists | test_playlists.py + streaming-contract + playback-playlists: CRUD, persistencia y fallos | MAN-US-070 | Unreleased | partial |
+| US-071 | ADR-004/importación flat-playlist acotada | playlist_routes/motor/IPC/Playlists | test_playlists.py: límites/commit/cancel/proceso real controlado; UI cancel UUID | MAN-US-071 | Unreleased | partial |
+| US-072 | ADR-004/reproducción ordenada | Playback y sesiones con dueño | playback-playlists: orden, aviso, anterior/siguiente y fin; electron-playback-lifecycle | MAN-US-072 | Unreleased | partial |
 | BUG-001 | `DirectoryCheck` | directory service/API/React | directory tests + React preflight | Windows clean acceptance | 2.1.0 | fixed |
 | QUALITY-001 | ADN/SDD/TDD ejecutable | contract validator + quality gates | validator tests + gate PR | `artifacts/quality/quality-pr.json` | 2.1.0 | fixed |
 

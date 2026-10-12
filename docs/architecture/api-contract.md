@@ -32,4 +32,28 @@ El backend vuelve a consultar la autorización vigente en cola, reintento, worke
 
 La búsqueda/filtro de historial y el aviso de enlace exacto repetido son locales sobre `GET /downloads`; no añaden endpoints ni prohibición de repetición. Abrir/reintentar sigue resolviendo por ID y mantiene defensa de archivos.
 
+## Reproducción y listas (implementado; aceptación pendiente, ADR-004)
+
+Definido por el [contrato de reproducción](../product/playback-and-playlists.md); US-067–US-072 siguen `partial` hasta aceptación real. Todas las rutas exigen el token y validan en backend aunque IPC ya haya validado. Las fuentes admitidas son enlaces HTTPS de YouTube/Vimeo sin credenciales ni puertos no estándar; IPC rechaza además puertos explícitos. Un enlace aceptado sintácticamente aún puede fallar al extraerse.
+
+| Ruta | Entrada | Salida | Errores |
+|---|---|---|---|
+| `POST /playback` | `url` 8–2048, `cookie_source`, `max_height` entero opcional (144–2160, predeterminado 1080) | metadatos seguros de sesión descritos debajo | `source_unsupported`, `live_unsupported`, `drm_protected`, `stream_unavailable`, 403 `browser_consent_required` |
+| `GET /playback/{session_id}` | UUID | metadatos seguros, desplazamiento real y causa de fallo | 404 `playback_not_found`, 410 `stream_expired` |
+| `GET /playback/{session_id}/stream?start=<s>&revision=<n>` | UUID; decimal finito `0 ≤ start ≤ duration`, solo `0` si duración desconocida; revisión entera 0–2147483647 (por defecto 0) | `StreamingResponse` `video/mp4` fragmentado, `Cache-Control: no-store` | 404 sesión desconocida, 410 `stream_expired`, 422 `invalid_start`, 409 `playback_cancelled` para trabajo sustituido |
+| `DELETE /playback/{session_id}` | UUID | 204 idempotente; termina el proceso activo y descarta sesión | UUID inválido 422 |
+| `GET /playlists` | sin cuerpo | array de listas completas con ítems en orden | 503 `playlist_storage_unavailable` |
+| `POST /playlists` | `name` 1–100 tras recortar | lista creada con `items: []` | 400 `invalid_playlist_name` / 422 esquema inválido |
+| `PUT /playlists/{id}`, `DELETE /playlists/{id}` | nombre / sin cuerpo | lista actualizada / 204 | 404 |
+| `POST /playlists/{id}/items` | `url`, `title?`, `duration?`, `thumbnail?` | ítem con `duplicate: bool`; un duplicado se guarda | 400 metadatos/enlace inválidos, 404, 422 esquema inválido |
+| `DELETE /playlists/{id}/items/{item_id}` | UUIDs | 204; quita solo el ítem | 404 `playlist_item_not_found`, 422 |
+| `POST /playlists/import` | `request_id` UUID, `url`, `cookie_source` | `{playlist, imported, unavailable}` | `playlist_too_large` con `found`, 403 `browser_consent_required`, 409 conflicto/cancelación, 504 timeout |
+| `DELETE /playlists/import/{request_id}` | mismo UUID generado antes de importar | 204; cancela el proceso y evita commit si este aún no ocurrió | 409 `playlist_import_completed` si ya se guardó; 422 UUID inválido |
+
+Los metadatos de sesión son `{session_id,title,duration,height,sponsor_segments:[{start,end}],sponsor_status,actual_start,status,error}`. `duration`/`height` pueden ser desconocidos; `sponsor_status` es `off|available|no_segments|unavailable`. No incluyen URL de stream, cabeceras, cookies ni token. `actual_start` confirma el fotograma clave inicial; la UI suma el tiempo local del vídeo y descarta la diferencia a la posición solicitada antes de reanudar. `start` admite notación decimal positiva o cero, sin exponentes, NaN o infinito.
+
+Cada lista es `{id,name,items:[{id,url,title,duration,thumbnail,available}],created_at}`. Importar incluye las entradas no disponibles y las cuenta dentro de `imported`. Se leen como máximo 501 entradas para detectar listas mayores de 500, se limita la salida del motor a 8 MiB y la operación a 60 s; ningún límite autoriza un resultado parcial. Cancelación y commit comparten un bloqueo: cancelar antes del commit impide guardado; después responde 409 `playlist_import_completed` sin borrar la lista. La UI deja de ofrecer cancelación al recibir éxito y ante ese 409 actualiza las listas y muestra que terminó. Reusar `request_id` durante la retención de la operación no duplica listas.
+
+`POST /playback` e importación revalidan el consentimiento estricto por fuente igual que `POST /media/inspect`. `sponsorblock_consent` se guarda como booleano separado, falso por defecto; solo `True` confirmado autoriza consultas hash-prefix de YouTube. Una sesión vive 4 horas en memoria y nunca se persiste. Cada `GET .../stream` termina el proceso anterior de esa sesión antes de iniciar otro; una desconexión antigua no termina el reemplazo. Las rutas que ejecutan el motor son síncronas en el threadpool para no bloquear streams activos; `POST /media/inspect` aplica el mismo criterio.
+
 Las rutas antiguas se mantienen como adaptadores durante una versión.

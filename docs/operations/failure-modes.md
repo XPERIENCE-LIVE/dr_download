@@ -20,6 +20,11 @@
 | Checksum incorrecto | hash no coincide | no reemplazar binario | conservar versión anterior |
 | Disco lleno | espacio mínimo/estimado o fallo durante descarga | bloquear cola o marcar failed; no simular pausa/reanudación | liberar espacio o elegir carpeta y reintentar |
 | Actualización incompleta | health check fallido | rollback atómico | continuar con versión instalada |
+| URL de stream caducada (ADR-004) | TTL de sesión o 403 del proveedor | 410 `stream_expired`; no reintentar en bucle | **Volver a cargar** resuelve de nuevo |
+| Proveedor rechaza el stream | exit code de FFmpeg o 403 | terminar proceso, `stream_unavailable` con diagnóstico redactado | actualizar motor y reintentar |
+| Cliente desconecta o busca | cierre del `StreamingResponse` o nueva petición | matar árbol de FFmpeg de esa sesión | ninguno; proceso con dueño |
+| SponsorBlock caído | timeout de 5 s o error HTTP | seguir sin saltos, `sponsorblock_unavailable` visible | reintentar en el siguiente vídeo |
+| Lista demasiado grande | más de 500 entradas | no crear nada, `playlist_too_large` con el número encontrado | importar una lista más pequeña |
 
 ## Invariantes verificables
 
@@ -34,6 +39,7 @@
 
    Backend verifica autorización estricta por fuente en API/cola/retry/worker/comando. Revocación fallida conserva bloqueo UI para nuevas inspecciones/creaciones y un error de guardado visible; la configuración backend anterior permanece hasta guardado confirmado. No prometer interrupción de procesos ya iniciados ni persistencia de una escritura fallida.
 8. La advertencia de repetición permite continuar y no elimina protección contra colisiones; filtrado local no modifica registros ni archivos.
+9. Reproducción (ADR-004): como máximo un proceso FFmpeg por sesión; cerrar la aplicación no deja procesos de reproducción; URLs de stream, cabeceras y token nunca llegan al renderer ni a los registros.
 
 Los errores y acciones se traducen por código conforme a [copy ES/EN](../design/error-copy.md); [experiencia confiable](../product/experience-reliability.md) define conservación de enlace, borrador, ID y datos durante recuperación.
 

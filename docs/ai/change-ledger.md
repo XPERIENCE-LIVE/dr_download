@@ -43,3 +43,7 @@ Las entradas siguientes conservan el registro histórico de trabajo, no certific
 ## Experiencia confiable — 2026-10-08
 
 US-062–US-066 tienen fingerprints y regresiones independientes en el ledger JSON. Su [contrato](../product/experience-reliability.md) enlaza decisiones, límites y casos manuales. Estado `open`: implementación/pruebas aisladas no sustituyen evidencia de aceptación Windows; no se inventan SHA, build ni resultados. ADR-003 aprueba la ampliación de historial sin cerrar historias ni gates. El [backlog](../product/backlog.md) conserva solicitudes diferidas y sus condiciones de entrada.
+
+## Reproducción y listas — 2026-10-11
+
+US-067–US-072 cuentan con rutas, almacenamiento, protocolo privado y vistas implementadas. El ledger JSON referencia regresiones existentes y conserva `open` hasta aceptación ligada al mismo SHA; [inventario y límites](../qa/streaming-validation.md). Las salidas roja/verde de desarrollo se guardan en `artifacts/quality/streaming-implementation`; no sustituyen MAN-US-067–MAN-US-072 ni firma/publicación. La búsqueda admite decimales para poder usar límites fraccionarios de SponsorBlock y la cancelación de importación usa un UUID previo al inicio y commit atómico. La ausencia del reproductor oficial no garantiza eliminar publicidad incorporada en el stream.

@@ -25,6 +25,7 @@ DEFAULT_CONFIG = {
     "language": "es",
     "cookie_source": "edge",
     "cookie_consent": False,
+    "sponsorblock_consent": False,
     "notifications": True,
     "output_dir": "",
     "auto_update_engine": True,

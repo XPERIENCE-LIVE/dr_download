@@ -32,7 +32,7 @@ async function requestBackend(baseUrl, sessionToken, operation, args) {
     // Bound the entire history response, including a body that stops arriving.
     signal: operation === "listDownloads" ? AbortSignal.timeout(10000) : undefined
   });
-  const payload = await response.json();
+  const payload = response.status === 204 ? null : await response.json();
   if (!response.ok) {
     const message = payload?.detail?.message || payload?.detail || `HTTP ${response.status}`;
     const recovery = payload?.detail?.recovery;

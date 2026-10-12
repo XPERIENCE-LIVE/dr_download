@@ -20,6 +20,8 @@ Un check de historia bloqueado mantiene esa historia fuera de `accepted`; no exi
 
 Para US-062–US-066 comprobar además los estados éxito/pendiente/fallo/desconocido ES/EN del [contrato de experiencia](../product/experience-reliability.md), navegación con borrador, límites API/IPC, codecs FFprobe, revocación persistida y hashes de archivos al repetir. Las fichas enlazan pruebas reales; sus casos Windows siguen `pending` hasta ejecución del paquete. No sustituir esa evidencia con tests React aislados.
 
+Para US-067–US-072 comprobar además los umbrales del [contrato de reproducción](../product/playback-and-playlists.md) en el paquete real (inicio, búsqueda, cortes, importación), ausencia de procesos de reproducción tras cerrar, ausencia de URLs de stream y token en renderer y registros, consentimiento estricto de cookies y de SponsorBlock, y rechazo explícito de DRM y directo. Las fichas citan pruebas solo cuando existan.
+
 US-064/065 incluyen serialización real de detail a través de IPC/contextBridge, autorización estricta por navegador, recheck en API/cola/retry/worker/comando y después de validación UI asíncrona. Un fallo al guardar revocación se acepta solo como bloqueo local visible con reintento; requiere guardado confirmado para acreditar política backend/reinicio. Al navegar, Ajustes conserva resultados pendientes.
 
 ## Checklist de release

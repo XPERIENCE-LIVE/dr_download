@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — reproducción y listas (plan aprobado, sin implementar)
+
+- ADR-004 aprueba reproducir YouTube/Vimeo en la aplicación sin el reproductor oficial ni sus anuncios, búsqueda por reinicio con posición absoluta, salto opcional de patrocinios con SponsorBlock y consentimiento propio, listas locales e importación por enlace con límite de 500 entradas.
+- Nueva épica E8 con US-067–US-072 en `partial`, casos MAN-US-067–MAN-US-072 pending y entradas `open` en el ledger; contrato en `docs/product/playback-and-playlists.md`.
+- Alcance, backlog, API, IPC, arquitectura, estados, fallos, ADN, guardrails, privacidad y copy de errores documentan la función. El riesgo de Términos de Servicio queda aceptado por producto; la publicación firmada de la función queda bloqueada hasta revisar condiciones de SignPath.
+
 ## Unreleased — experiencia confiable
 
 - US-062–US-066 documentan conexión confirmada, inspección indeterminada, encolado diferenciado, borrador de sesión y acceso explícito a Cola.
